@@ -1,0 +1,140 @@
+========================
+= Grail Grammars @GRAMMARS_VERSION@ =
+========================
+
+Release: @RELEASE_DATE@
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+(c) 2008-@COPYRIGHT_YEAR@ Richard Moot (Richard.Moot@labri.fr)
+(c) 2008-@COPYRIGHT_YEAR@ CNRS         (http://www.cnrs.fr)
+(c) 2008-@COPYRIGHT_YEAR@ INRIA        (http://www.inria.fr)
+
+This archive contains a number of grammars intended to illustrate
+several different features of Grail as well as some tutorial fragments
+intended for users which are new to categorial grammars, new to Grail
+or both.
+
+Each grammar can be loaded into Grail by selecting [File/Load...] and
+then selecting the desired file. Each file has a separate (short)
+documentation file which has the same filename as the grammar file,
+but an html extension. These documentation files can be accessed using
+a web browser, or directly from Grail by selecting [Help/About This
+Grammar....] 
+
+= grail0.pl =
+
+This is the first tutorial grammar, designed to help you experiment
+with the lexicon, adding lexical graphs and parse sentences
+automatically and interactively.
+
+= hitchhiker.pl =
+
+This is the second tutorial grammar, designed to show the new
+grammatical possibilities with the addition of structural rules.
+
+= engproncase1.pl =
+
+This is the first of two grammars, both of which were developed
+by Richard T. Oehrle, which illustrated how the use of the unary
+connectives to treat the case of pronouns in English. It uses two
+unary modes: one for nominative case and one for accusative case.
+The derivability relation takes care of the fact that full noun
+phrases can occur both in nominative and accusative cases.
+
+= engproncase2.pl =
+
+This is the second of two grammars illustrating the use of the
+unary connectives to treat English pronoun case. Like the previous
+grammar, it was developed by Richard T. Oehrle. The difference with
+the previous grammar is that it uses just a single unary mode; the
+derivability relation alone assures the distinction between
+nominative, accusative and full noun phrases.
+
+= dutch.pl =
+
+This grammar, designed by Michael Moortgat, shows how Grail's shared
+forest representation of proof nets can generate a single
+representation for the different word order possibilities for Dutch:
+verb-initial for questions, verb-second for main phrases and
+verb-final for auxiliary phrases.
+
+= semantics.pl =
+
+This grammar is based on example sentences from Chapter 6 of Bob
+Carpenter's book "Type-logical Semantics". It illustrates coordination
+and wh extraction together with the corresponding lambda-term recipes.
+The generalized quantifiers in the grammar are treated using
+associativity only. The grammar q.pl below gives a more general
+implementation, allowing medial extraction and medial quantifiers as
+well.
+
+= q.pl =
+
+This grammar, also designed by Michael Moortgat, provides a treatement
+for generalized quantifiers, wh extraction and more ... than
+constructions. It shows how Grail's filtering strategies, especially
+the custom first-order declarations eliminate many of the connections
+which can never contribute to a proof.
+
+= drt_assoc.pl =
+
+This more semantic grammar uses Reinhard Musken's ideas for a DRT
+semantics for categorial grammars together with many of the classic
+examples, like the famous donkey sentences. Syntactically, it uses
+a multimodal setup much like the grammar hitchhiker.pl with a
+combination of an associative mode "a" and a non-associative mode "0".
+
+= drt.pl =
+
+This grammar is similar to drt_assoc.pl above, with the exception that
+is uses a treatment for generalized quantifiers like the grammar q.pl.
+
+= dynamics.pl =
+
+Another semantic grammar, this one using the ideas of Philippe de Groote
+to implement a dynamic semantics in the simply typed lambda calculus.
+
+= clitics_simple.pl =
+
+This is a grammar for French object clitics, using the ideas of
+Moot & Retore. The constraints on the order of the clitics are enforced
+by using the unary branches.
+
+= clitics.pl =
+
+This is an extension of the previous grammar, but it uses unary
+modes to handle case (similary to the grammar engproncase2.pl for
+English) in addition to handling the clitic order by use of the
+unary modes.
+
+= pentus.pl =
+
+This grammar is an implementation of Pentus' NP completeness proof for
+the Lambek calculus to test Grail's performance against some
+particularly tough problems. See the grammar file to see some examples
+as well as to see how to construct your own.
+
+= savateev.pl =
+
+This grammar is an implementation of Savateev's NP completeness proof
+for the Lambek calculus without product, again as a tough test for
+Grail's performance. This grammar works particularly well with the
+"partial" atom select option, since there are many atoms with a
+unique linking possibility. The particularity of this grammar with
+respect to Pentus' is that Grail's filtering mechanisms work a lot
+better, eliminating the need for contractions to find out a sequent is
+underivable. On the other hand, the number of atomic formulas is a lot
+bigger and causes a stack overflow rather quickly.

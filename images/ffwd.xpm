@@ -1,0 +1,34 @@
+/* XPM */
+static char * ffwd_xpm[] = {
+/**/
+"24 24 4 1",
+/*,S@,Y@,Z@|\@*/
+" 	s None	m None	c None",
+".	c gainsboro",
+"X	c dark slate grey",
+"o	c black",
+/**/
+"                        ",
+"                        ",
+"                        ",
+"                        ",
+"                        ",
+" ..      ..             ",
+" .X..    .X..           ",
+" .XXX..  .XXX..         ",
+" .XXXXX...XXXXX..       ",
+" .XXXXXXX..XXXXXX..     ",
+" .XXXXXXXXX..XXXXXX..   ",
+" .XXXXXXXXXXX..XXXXXX.. ",
+" .XXXXXXXXXXXooXXXXXXoo ",
+" .XXXXXXXXXooXXXXXXoo   ",
+" .XXXXXXXooXXXXXXoo     ",
+" .XXXXXoo.XXXXXoo       ",
+" .XXXoo  .XXXoo         ",
+" .Xoo    .Xoo           ",
+" .o      .o             ",
+"                        ",
+"                        ",
+"                        ",
+"                        ",
+"                        "};

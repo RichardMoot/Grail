@@ -1,0 +1,74 @@
+#!@TCLSH@
+
+set infile [lindex $argv 0]
+
+set infile2 [lindex $argv 1]
+
+set outfile [lindex $argv 2]
+
+set mode 0
+
+set f [open $infile r]
+set fo [open $outfile w]
+
+# if the second file is e
+
+if {[file exists $infile2]} {
+
+    set fh [open $infile2 r]
+
+    set pmode 0
+    while {[gets $fh line] >= 0} {
+	# wait until the first page starts to find out the number of pages
+	if {$pmode == 0 && [regexp {^%%Page: ([0-9]+) ([0-9]+)$} $line all page end]} {
+	    # prefix the prologue and the single page of the first file
+	    while {[gets $f line] >= 0} {
+		if {$mode == 0} {
+		    if {[regexp {^%%Page: 1 1$} $line]} {
+			puts $fo "%%Page: 1 [expr $end+1]"
+			set mode 1
+		    } else {
+			puts $fo $line
+		    }
+		} elseif {$mode == 1} {
+		    if {[regexp {^%%EndPage: 1$} $line]} {
+			puts $fo $line
+			break
+		    } else {
+			puts $fo $line
+		    }
+		}
+	    }
+	    puts $fo "%%Page: [expr $page+1] [expr $end+1]"
+	    set pmode 1
+	# pmode 1: copy everything until EndPage, then move to pmode 2
+	} elseif {$pmode == 1} {
+	    if {[regexp {^%%EndPage: ([0-9]+)$} $line all page]} {
+		puts $fo "%%EndPage: [expr $page+1]"
+		set pmode 2
+	    } else {
+		puts $fo $line
+	    }
+	# pmode 2: wait for start of next page, the move to pmode 1
+	} elseif {$pmode == 2 && [regexp {^%%Page: ([0-9]+) ([0-9]+)$} $line all page]} {
+	    puts $fo "%%Page: [expr $page+1] [expr $end+1]"
+	    set pmode 1	    
+	}
+    }
+
+    close $fh
+
+    puts $fo "%%Trailer"
+    puts $fo "%%Pages: [expr $end+1]"
+    puts $fo "end"
+    puts $fo "restore"
+    puts $fo "%%EOF"
+
+} else {
+
+    while {[gets $f line] >= 0} {
+	puts $fo $line
+    }
+}
+close $f
+close $fo

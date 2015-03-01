@@ -1,0 +1,32 @@
+/* XPM */
+static char * ball_white_xpm[] = {
+/* width height ncolors chars_per_pixel */
+"20 20 6 1",
+/* colors */
+" 	s None	c None",
+".	c tomato",
+"X	c tan",
+"o	c white",
+"O	c firebrick",
+"b	c black",    
+/* pixels */
+"         bb         ",
+"                    ",
+"                    ",
+"         bb         ",
+"         bb         ",
+"                    ",
+"                    ",
+"      b.oo..Xb      ",
+"     b.oo...XXb     ",
+"                    ",
+"                    ",
+"     bXXXXXXOOb     ",
+"      bXXXOOOb      ",
+"                    ",
+"                    ",
+"         bb         ",
+"         bb         ",
+"                    ",
+"                    ",
+"         bb         "};

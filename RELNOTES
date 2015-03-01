@@ -1,0 +1,683 @@
+% 20090306 Changed Grail's "load grammar" menu item (and command line
+%          option) so that subsequent "load grammar" commands start in
+%          the directory of the previously loaded grammar.
+%
+% 20090303 Updated the semantics output to allow for different ways to
+%          display variables of different types. So, for example,
+%          variables of type "e" are displayed as x, y, z and variables
+%          of type "e->t" are displayed as P, Q, R. You can define your
+%          own rules in sem_utils.pl
+%
+% 20090227 Added "paper_size" parameter both to the menu and to the
+%          LaTeX output (for the semantics only, since the lambda-
+%          terms can grow rather big there).
+%          Grail restarts LaTeX (and updates the semantics.tex file
+%          with sed) when the paper size is changed.
+%
+% 20090226 Updated the semantic type verification in sem_utils.pl to
+%          be able to handle Philippe de Groote's dynamic semantics
+%          as used by the grammar file dynamics.pl.
+%
+% 20090226 Updated Grail's grammar save mechanism, adding the new 
+%          dynamic predicates and producing slightly better looking
+%          ouput.
+%
+% 20090225 Added a new option to the LaTeX semantics output:
+%          collapse_lambda which, when set to @on, will portray a
+%          sequence lx.ly.lz.T as lxyz.T and does the same for
+%          sequences of identical quantifiers.
+%
+% 20090116 Replaced reduce_sem.pl with a more general sem_utils.pl.
+%          There are predicates for verifying the lexical type
+%          assignments (given atomic_type/2 declarations for the
+%          atomic types in your grammar) and a database query
+%          component, which converts lambda terms to Datalog queries
+%          or assertions if sentence_category/2 declarations are
+%          given.
+%
+% 20081215 Smoothed out the statistics window, which is now simply
+%          a window titled "Statistics".
+%          Changed the default options, so that neither the
+%          statistics nor the ghostview window open atomatically.
+%
+% 20081215 Fixed XPCE/OS X font problems. This is just a workaround
+%          which avoids using bold fonts altogether.
+%
+% 20081215 Fixed placement of activate_items calls so that aborting
+%          anywhere now reactives all the menu items (load/parse,
+%          etc.) which were deactived at the start of the parse.
+%
+% 20081215 Added a finished_dialong call to the prove/2 predicate.
+%
+% 20071018 Added new options to restricting the total runtime, the
+%          total number of inferences and the maximum number of
+%          generations for the structural rewrites. This allows
+%          the user to automatically abort (too) lengthy
+%          computations
+%
+% 20071017 Added Gabow's strong component and Regin's all_different
+%          algorithm to the graph library in the main branch.
+%
+% 20071003 Added command line options to switch off applications
+%          of Regin's algorithm as well as the immediate failure
+%          upon finding an axiomatic formula with no linking
+%          possibilities in the axiom heap. These are useful for
+%          debugging overeager optimisation and will be included
+%          as proper menu options in the future.
+%
+% 20071016 Corrected error in the context-free grammar for the
+%          unary contractions.
+%
+% 20070914 Rewritten the external_component predicate to use simple
+%          depth first search to find a component of the nodes
+%          reachable using only the external modes. It seems more
+%          effective than the previous bottom up strategy, but I
+%          need to do more testing, especially for "dead end" nodes
+%          which have no external daughters.
+%
+% 20070914 Added text and log message indicating count check failure.
+%          Should I make this a dialog window instead?
+%
+% 20070912 Added a first graphical display of the parse statistics
+%          using XPCE's bar graph library.
+%
+% 20070912 Added new options for switching of Regin's algorithm and
+%          the constraint that no element of the axiom link heap
+%          can have zero possibilities. This is mainly useful for
+%          debugging grammars, where it's interesting to see why a
+%          parse fails.
+%
+% 20070326 Added a first implementation of Regin's algorithm for
+%          filtering axiom links.
+%
+% 20070316 Added automatic log file which is updated with the
+%          parse and result information. Information will be
+%          written to the file grail_log (or to /dev/null if the
+%          user has no write permissions in the current directory.
+%
+% 20070315 Added `About this grammar' item to the help menu.
+%          Selecting this menu item will show the file with the
+%          same name as the grammar file but with an html
+%          extension in the Help window. This will allow grammar
+%          writers to comment on their grammar and the design
+%          choices made.
+%
+% 20070314 Logged more information for axiom linkings: the total
+%          number of axiom links performed and the `perfect' number
+%          of axiom links, which would change only the axioms which
+%          actually differ between readings.
+%
+% 20070313 Added a new `totality' constraint specifying that at
+%          least one total linking needs to be possible, which is
+%          done by simply applying the Hungarian algorithm. This is
+%          a preface to implementing Regin's algorithm for constraints
+%          of set-difference.
+%
+% 20070208 Updated the semantic reduction relation to give a slightly
+%          more flexible DRS composition relation.
+%
+% 20070111 Simplified the implementation of the Floyd-Warshall
+%          algorithm in the graph library.
+%
+% 20060220 Minor bugfix release. Fixes errors in the lexicon display
+%          (which hadn't been updated for the latest additions yet)
+%          and a more serious (but apparently quite rare) one, where
+%          two components were joined, but the resulting component
+%          would join the two new sets instead of treating one of the
+%          two old components as fully new. Another error, where
+%          load_fragment would not delete the previous phrases because
+%          of incorrect invocation of retractall has been fixed. 
+%          A final error, causing par links to be erroneously
+%          identified as `active' after a contraction, has been 
+%          corrected as well.
+%
+% 20050926 Added new command line invocation possibilities as well
+%          as items for the option menu to choose between automatic,
+%          kbest and manual linking, as well as between automatic and
+%          manual par contractions.
+%          When using kbest, it is possible to give a Prolog
+%          expression containing at most one variable (which will be
+%          instantiated to the the number of rows/columns in the
+%          graph at runtime).
+%
+% 20050923 Added kbest possibility for axiom linkings, using the
+%          Kuhn-Munkres algorithm.
+%
+% 20050913 Added filtering for readings which are impossible because
+%          of the `sentence ordering' as used by Bernardi & Moot to
+%          restrict scope ambiguities and by Moot & Retore to rescrict
+%          clitic ordering.
+%          Any mode declared inert (by using inert_mode/1 in the
+%          fragment file) will be subjected to this filtering. Note
+%          that (for the moment at least) this requires this mode to
+%          be internal.
+%
+% 20050912 Corrected old mistake in tokenize.pl.
+%
+% 20050615 Updated save_fragment to take the new information
+%          (continuity and custom first-order) into account.
+%
+% 20050609 Fixed mistake in floyd_warshall; added missing ord_union
+%          cases and removed order switch between the two sets, since
+%          we do care about the order.
+%
+% 20050606 Separated the first order labeling and added support for
+%          `custom' labeling, where you can specify the first order
+%          translation of formulas yourself.
+%
+% 20050525 Finally implemented proper cleanup of unreachable leaves
+%          for the diamond and product contractions.
+%
+% 20050524 Added check for (sound) unification to axiom links;
+%          looking for a way to subsume this with a more
+%          sophisticated strategy.
+%
+% 20050513 Fixed mistake in planarity check for product types.
+%          Added semantics when substituting a known word for an
+%          unknown.
+%
+% 20050512 Added support for the use of first-order variables to
+%          check for planarity. This will be applied to any modes
+%          declared continuous in a fragment (as in Grail 2). More
+%          sophisticated schemes are possible, however, when using
+%          more than two variables, or by using extraction (and
+%          infixation) strategies.
+% 
+% 20050511 Included a semantic component for the first time and added
+%          (as of yet unused) support for using first-order variables
+%          to eliminate readings. More test are necessary to verify
+%          everything works correctly.
+%
+% 20050311 Added first attempt at a `standard' autoconf structure.
+%          Probably needs to be updated to be fully robust, but in
+%          principle 
+%
+%          ./configure [--prefix=... if not /usr/local]
+%          make 
+%          make install
+%
+%          should configure, compile and install grail.
+%          Compilation into executable is also new and makes Grail
+%          startup quite a bit faster.
+%
+% 20050311 Removed mistake in initial_yield/4 which resulted in
+%           `word order mismatch' for all single-word phrases.
+%
+% 20041104 Added the possibility for using an external GraphViz
+%          implementation (eg. PixelGlow's for MacOS X). To use
+%          this feature, simply open the file tmp.dot, which is in
+%          the directory from where you started Grail, with GraphViz.
+%
+% 20041104 Added word order check for solutions. Now, if a potential
+%          proof net does not have the words in the order of the
+%          input sentence, a message to this effect will be displayed.
+%          The possible word orders for this reading will still be
+%          sent to the terminal
+%
+% 20041028 Minor modification for SWI-Prolog 5.4.3: numbervars is no
+%          longer in the quintus library, so the line
+%
+%          :- use_module(library(quintus),    [numbervars/3]).
+%
+%          has been suppressed from the includes. Add it again if
+%          you are using an older version of SWI Prolog.
+%
+% 20040917 Added "abort" option to the dialogs, giving the user the
+%          possibility to abondon the proof search.
+%
+% 20040821 Added possibility to open a new gv window.
+%
+% 20040816 Added workaround for (probable) XPCE bug which removes
+%          value_set information when the lexicon window is destroyed
+%          and then reopened.
+% 
+% 20040815 Added informational messages for when a solution has been 
+%          found or proof search is finished.
+%
+% 20040815 Added error message when a word is not in the lexicon, with
+%          the possibility to select similar words from the lexicon.
+%
+% 20040814 Created icons for the lexical edit facilities.
+%
+% 20040810 Created help-brower using XPCE's html-support.
+%          Modified paths to be less dependent on the actual locations
+%          of the Grail and GraphViz directories.
+%
+% 20040809 Made the XPCE structure more modular, avoiding the
+%          use of named entities (except for the windows).
+%          Added a lexicon window as a way of viewing the different
+%          entries.
+%
+% 20040504 First release implementing ideas from my CG2004 paper.
+%
+% 20040503 Removed a mistake in the par_graph predicate. Everything
+%          appears to work now. Fun to see the reduction in possible
+%          links. Unsuprisingly, the reductions for the Pentus
+%          fragment are quite limited.
+%
+% 20040430 First implementation of the connectedness check using the
+%          Floyd-Warshall algorithm. Some extra testing necessary.
+%
+% 20040423 Added some functionality to the ordset library for the case
+%          where we have an ordered set of Key-Value pairs.
+%
+% 20040305 Added a floyd_warshall predicate to the graph library.
+%
+% 20040129 Minor update to interface.pl, allowing the par contractions
+%          to be performed without user input.
+%
+% 20040120 Added a very basic user interface using XPCE. examples/0
+%          will display a list of examples (similar to the main window
+%          of Grail2) and for atom selection a matrix is now displayed.
+%
+% 20030820 Added interface to disjoint set data structures to be able
+%          to use a standard disjoint set implementation thereby
+%          preventing global substitutions across the array. Early
+%          test data (ds_dummy vs. disjsetb) show an increase in
+%          performance, especially if there are reasonably many
+%          unions/replacements.
+%
+% 20030820 Updated the logarr implementation to give a choice of
+%          log4 (as previous), log8 and log16 arrays.
+%
+% 20030707 Removed strange mistake in the atomic formula selection
+%          which prevented the user from making a choice inconsistent
+%          with the default choice. 
+%
+% 20030604 Finally added some acyclicity tests. Now, for every atomic
+%          formula, the number of possible connections is computed and
+%          the atomic formula with the least possibilities is
+%          preferred. The user can still override this decision.
+%
+% 20030604 Reprogrammed the user_link predicate to make it a bit more
+%          general, having only the heap of atomic formulas as input
+%          argument and the formula name and two indices of the linked
+%          formulas as output.
+%
+% 20030602 Added a graph library containing a modification of
+%          O'Keefe's implementation of Warshall's algorithm for
+%          transitive closure which works with 234trees instead of
+%          associative lists. The only other predicates at the moment
+%          are a reflexive closure and a transitive, reflexive closure
+%          which is a simple combination of the two.
+%
+% 20030527 Found a mistake in the product par contraction. Failure to
+%          clean up unreachable vertices leads to problems and needs a
+%          structural solution.
+%
+% 20030527 Added a file pentus.pl which converts SAT formulas to Grail
+%          queries according to Pentus' recent paper. This file is
+%          good for generating large proof nets, but would probably
+%          require implementation of planarity to function properly.
+%
+% 20030418 Corrected mistake in the interactive atomic formula
+%          selection which prevented retrying axiom links.
+%
+% 20030417 Made some corrections to the clitics fragment, where some
+%          missing box(h(0),A) items made multiple solutions possible
+%          for the `laisser'/`vouloir' cases.
+%
+% 20030417 Corrected the root percolation in the unfold1
+%          clauses. Looking at it now, I think there is no need for
+%          any percolation for positive formulas at all and we can do
+%          with one less argument.
+
+% 20030415 Added a primitive interface where the user can determine
+%          which par link is contracted to the theorem prover. In the
+%          case of multiple active components, however, no choice is
+%          yet offered.
+%
+% 20030415 Discovered and fixed an annoying bug in the
+%          btree_remove_2c1 > case of the tree234 library where a
+%          copy/paste error caused the return value to accidentally
+%          become instantiated too early, causing the entire remove
+%          operation to fail.
+%          Another annoying error: '/' instead of '.' caused the three
+%          case of fix_3node_t3 to fail in certain cases.
+%          Sentences of the clitics fragment now work correctly! (but
+%          need a rather large amount of local stack)
+%
+% 20030414 The idea of a short stack subgraph with top item as source
+%          and bottom item as sink does not appear to work; both items
+%          end up next to eachother.
+%
+%          Made it possible for the user to define which record type
+%          and outline color to use for both internal (atomic
+%          formulas) and external nodes (goal and leaves).
+%
+% 20030410 Atomic formulas are now displayed as well, either as the
+%          top element of a record (for positive atomic formulas) or
+%          as the bottom element of a record (for negative atomic
+%          formulas). Note that this can lead to confusion between
+%          atomic formulas and lexical anchors. I'm thinking about
+%          replacing the records by something else to improve the
+%          visual appearance a bit; maybe a short stack of items.
+%
+% 20030410 Improved the distributed layout a bit by adding invisible
+%          edges between node copies, which seems te recapture most of
+%          the tree structure.
+%
+% 20030409 Added a new display mode `distributed' where components are
+%          displayed with the edges listed and vertices which occur
+%          multiple times are copied. This leads to *very* wide
+%          components after structural rules. A system with invisible
+%          edges between the copied nodes would help.
+%          Added an option to display both the word and the vertex
+%          number.
+%
+% 20030409 Fixed old mistake in the unfold clauses, where the root was
+%          incorrectly calculated.
+%
+% 20030409 Updated the manual axiom linking to make it
+%          nondeterministic.
+%
+% 20030407 Added a very basic interface to perform axiom links
+%          manually.
+%          Restructured interface.pl to make the places for modifying
+%          colors and output options more clear.
+%
+% 20030404 Finally implemented the top-down equality enforcion in such
+%          a way that it works in the unary and multimodal case as
+%          well.
+%
+%                 A
+%                 |
+%                 i
+%                / \
+%               B   C
+%
+%          Two nodes B and B' are equal if they share the following
+%          attributes:
+% 
+%          1) parent A is the same
+%          2) mode i from A to B is the same
+%          3) B and B' have the same yield (note that for unary modes
+%            this is condition is a consequence of condition 1)
+%
+%          To accomplish this we keep track of two associative arrays:
+%          one from vertices to yields and one from Parent, Mode,
+%          Yield triples (or pairs in the case of unary modes) to
+%          vertices.
+%
+%          This guarantees that for a dl, dr or box contraction only
+%          a single tensor link can satisfy it.
+%
+%          Unfortunately, the Dutch fragment shows that for the dia
+%          contraction (and presumably for the p contraction as well)
+%          there can be many tensor links, meaning it may be necessary
+%          to identfy many nodes, which can lead to new
+%          identifications etc.
+%          THIS VERSION IS G3B3.PL
+%
+% 20030403 Fixed some mistakes in the `abstract' graph representation,
+%          where every component is a vertex (showing the component
+%          number (the root) and the total number of edges in it) and
+%          only the par links are drawn explicitly.
+%
+%          Added some extra output steps between the axiom links and
+%          some extra (re)computation of active par links after each
+%          axiom link.
+%
+%          Suppressed graph output if the graph is identical to the
+%          previous graph (in the case a component expansion adds no
+%          new links).
+%
+% 20030403 Fixed some very old mistakes. Most importantly, the `Avoid'
+%          list of components not ready to be expanded is a multiset
+%          instead of a set (ie. if the root nodes of two par links
+%          are inside a component it does not become active until both
+%          have been contracted). Added an ord_dup_insert/3 predicate
+%          into the ordsets library to remedy this. Also added an
+%          ord_select/3 predicate, which uses the ordering.
+%
+% 20030403 Moved the graph predicates into a separate `interface'
+%          module. This should make it possible to have output into
+%          different types of formats, while doing so modularly.
+%
+%          Updated the placement of tensor nodes to make them more
+%          tree-like.
+%
+% 20030402 First code on the graphviz interface. Placement of vertices
+%          needs some more work.
+%          THIS IS VERSION G3G.PL
+%
+% 20030331 Some corrections to the 234tree module, plus conversion of
+%          the remaining predicates into Prolog.
+%
+% 20030327 Corrected the computation of the yields. It now works
+%          correctly in the associative/commutative case as well.
+%          Have to modify it to take the modes into account to work
+%          correctly for the unary modes as well.
+%
+% 20030327 Finished updating the 234tree package (hopefully).
+%
+% 20030326 Updated the 234tree package to be more `Prolog-like' using
+%          first argument indexing wherever possible. Code can
+%          probably still be cleaned up a bit, since right now there
+%          are a number of similar-looking predicates which can
+%          probably be identified. 
+%
+% 20030325 Converted the Mercury 234tree package to the standardized
+%          btree format and added the necessary clauses for
+%          modularity. Initial results suggest the 234tree is
+%          marginally better than all other tree formats used.
+%          THIS VERSION IS G3B2.PL
+%
+% 20030324 Added some extra clauses to make the choice between the
+%          different binary tree packages more modular.
+%
+% 20030324 Removed a mistake in replace_tensor_list; in the previous
+%          version replacing a vertex name could cause the tensor list
+%          to become unordered.
+%
+% 20030321 Some comments on the identification of vertices in the note
+%          from 20030314:
+%          The top-down method sketched there is incorrect, look for
+%          example at the associative-commutative calculus, where
+%          equality of the left leaf does *not* entail equality of the
+%          right leaf as well. We should start with noting that a
+%          necessary (but in the presence of inclusion postulates and
+%          unary modes, not sufficient) condition for equality between
+%          two vertices is that they have the same yield of leaves. In
+%          combination with the modes, we might get a good equality
+%          criterion from this.
+% 
+% 20030321 Added some changes to the way balanced binary trees are
+%          used; now we can choose between red-black trees
+%          (implementation from Mercury) and AVL trees (implementation
+%          from Gert-Jan van Noord's finite state tools). Both of
+%          these seem slightly less fast than the SICStus assoc.pl
+%          library. I have renamed predicates from both packages in
+%          order to making switching back and forth more easy.
+%          Also, I've added a btree_get_replace predicate, as we
+%          frequently get the value of a key first then put a new
+%          value back for this same key. The btree_get_replace
+%          predicate allows us to do this in one go, preventing
+%          possibly some unnecessary restructuring.
+%
+% 20030314 Moved the merge_vertices call to the add_outs predicate,
+%          implementing the top-down strategy described below. There
+%          is still the problem than when two vertices are identified,
+%          this can force further identifications. Specifically the
+%          ord_union/3 call in replace_component/4 should take into
+%          account that OrdSet1 can contain p(i,A,x) and OrdSet2 can
+%          contain p(i,B,x) forcing identification of A and B.
+%
+% 20030314 Implemented a merge_vertices predicate which solves the
+%          problem with the overly greedy selection of tensor links
+%          during the contraction phase, at least for the dl, dr, box
+%          cases. I'm not sure what the p, dia cases would look
+%          like. It would be better to have a separate merging stage
+%          immediately after (or even during) the add_outs predicate,
+%          enforcing the following:
+%
+%            p(i,x,A) ... p(i,x,B)  =>  A = B
+%            p(i,A,x) ... p(i,B,x)  =>  A = B
+%            dia(i,A) ... dia(i,B)  =>  A = B
+%
+%          or maybe
+%
+%            X-L ... Y-L            =>  X = Y
+%
+%          The fragment ass.pl seems to suggest the two are
+%          equivalent, but I'm not sure if I prefer the bottom-up or
+%          the top-down version. Top-down seems cheaper to implement.
+%
+% 20030314 Switched to ordered set representation for the list of
+%          tensors; this makes it easer to merge two vertices as we
+%          can now use ord_union/3 instead of append/3 followed by
+%          sort/3.
+%          Given that every vertex starts out with this list either
+%          empty of containing one element, we never have to
+%          explicitly sort the list, only make sure we insert the
+%          items in the right order.
+%
+% 20030313 Added a merge_assoc/3 implementation to the assoc library
+%          to be able to merge two associative arrays without
+%          converting back and forth to ordered lists. This made the
+%          replace/n predicates more simple. Also removed the
+%          replace_components/4 predicate, since we already know in
+%          wich component we need to replace the values. Made a
+%          simpler replace_component/4 predicate which uses simple
+%          structural induction on the associative array, eliminating
+%          another use to assoc_to_list/2 followed by list_to_assoc/2.
+%          Reorganizing unfold would eliminate the remaining
+%          list_to_assoc/2 and list_to_array/2 calls.
+%
+% 20030312 A problem with this version is that there can now be
+%          multiple solutions for a contraction (test9 from dutch.pl
+%          is an example of this, where the first, wrong, alternative
+%          is chosen and the because, unlike with
+%          the version which added the edges top-down it is now
+%          possible to have 5-dia(i,49) and 5-dia(i,50) with 49 and 50
+%          different vertices. It seems a either a more `hybrid'
+%          strategy for adding the edges is needed or a separate
+%          identification phase, possibly as late as during
+%          apply_contraction.
+%
+% 20030312 Fixed mistake in apply_contraction where we wrongly assumed
+%          to know the root of the tensor link to remove in the p and
+%          dia case.
+%
+% 20030312 As a workaround for the nontermination, new rules are added
+%          bottom-up again with the difference that only if X-[Y] (as
+%          opposed to X-[...,Y,...] already exists no edges will be
+%          added. I'm pretty sure this still won't always terminate
+%          but it will at least prevent the overeager identification.
+%
+% 20030312 Components are now represented as Root-cmp(New,Old) where
+%          New is the subcomponent which is newly added after a
+%          contraction. This will remove duplicate work and is more
+%          consistent with the new/old distinction in expand_component
+%          as well.
+%
+% 20030311 Identified the specific problem for the Dutch fragment.
+%
+%                 A                   A
+%                 |                   |
+%                 1                   1
+%                / \                 / \
+%               B   C               H   I
+%               |   |               |   |
+%               w   1    -[P6]->    1  e1
+%               |  / \             / \  |
+%               D E   F  <-[P10]  J   E G
+%                     |           |
+%                    e1           w
+%                     |           |
+%                     G           D
+%
+%          P6 checks for e1 and introduced a new node J for the parent
+%          of w, after which P10 applies, introducing a new node which
+%          checks for w and introduces a new parent F' for e1 ...
+%
+% 20030307 Source of problems was overly aggressive identification of
+%          vertices. The question when two vertices are equal turns
+%          out to be more challenging than I assumed. The simple
+%          associative fragment already shows we cannot be too lazy
+%          identifying vertices either. Food for thought.
+%          Have implemented a top-down instead of bottom-up
+%          identification procedure now, but I suspect this may still
+%          be the source of problems with the MA/MC postulates.
+%
+% 20030307 Have added a small and simple interface to the theorem
+%          prover which makes it more simple to use Grail2 fragments
+%          without modifications. Imported the tokenizer and macro
+%          expansion facilities unchanged.
+%
+% 20030305 There is something strange going on in the Dutch fragment,
+%          dutch.pl, where only one out of two possible rewrites is
+%          found. It looks like `P4' applies only at the wrong, higher
+%          possibility and not at the right, lower possibility. This
+%          is probably caused by the match/2 predicate which was made
+%          to function from root to leaves only. 
+%
+% 20030305 Added preliminary distinction between new and old vertices
+%          in expand_component, resulting in a rather remarkable
+%          speedup.
+%
+% 20030304 Replaced association lists for root-component pairs with
+%          AVL associative array implementation from the SICStus
+%          library. Reimplementation is probably necessary because of
+%          copyright reasons. The del_assoc function crucial here, and
+%          is not in the public domain associative array
+%          implementation. Balance needs to be implemented as well.
+%          Updates for both arrays and associative arrays are still
+%          done by translating back and forth to lists, which is easy
+%          and translating this directly to the arrays is going to be
+%          difficult anyway, since the order of the elements may
+%          change.
+%
+% 20030304 Replaced association list for vertex-component map with
+%          logarithmic arrays from the DEC-10 Prolog library,
+%          replacing linear access to items via member_chk1/2 by
+%          logartithmic access through aref/3.
+%
+% 20030303 Removed nasty bug which prevented finding a solution for
+%          multiple clitics in the clitic fragment. The problem was
+%          the use of member_chk instead of member when selecting a
+%          link for a known root.
+%          Added some diagnostics.
+%
+% 20030228 Only initial par links are contracted, now. When there is a
+%          conflict situation (multiple par links with active leaves
+%          in the same component) we try nondeterministically.
+%
+% 20030225 Updated the rest of the code to handle Root-Component pairs.
+%          Added filtering of unreachable nodes after contractions;
+%          I suspect this still doesn't work properly with the product
+%          and diamond contraction.
+%          Added vertex->component mapping, making it easier to select
+%          a component when you only have a vertex number. This will
+%          already prevent many cycles, since now only vertices from
+%          different components will be linked. Future implementation
+%          with Rem's equivalence class algorithm will make this faster.
+%
+% 20030220 Unfolding now produces a list of Root-Component pairs, which
+%          need to be incorporated better.
+%
+% 20030219 Added expansion phase before contractions. Again very naive.
+%          Would benefit from division into components and from splitting
+%          up the component into `old' an `new' links, since for every
+%          iteration of the expansion phase we need to consider only those
+%          conversions which match on at least one of the new links.
+%          Nonetheless, we now have a full theorem prover for the base
+%          logic with non-expanding structural rules!
+%
+% 20030219 Reimplemented the use of integers for vertices to make the code
+%          more clean. I think O'Keefe's implementation of Rem's algorithm
+%          for equivalence classes might help to remove the ugly
+%          replacements which are necessary when two vertices are unified.
+%
+% 20030218 Added very naive contraction predicate. We are now in operation
+%          for the base logic!
+%
+% 20030218 Added very naive linking predicate.
+%
+% 20030218 First coding for next-generation Grail. Unfolding appears to work.
+%          Used Prolog variables for vertices in the graph to make later
+%          identification more simple.
+%          Right now all tensors are still generated produced in a single list;
+%          a better solution will be to generate the different components
+%          separately or at least to separated the components later.
+

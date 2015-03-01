@@ -1,0 +1,52 @@
+\documentclass[leqno]{article}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{proof}
+\usepackage{moreverb}
+\usepackage{array}
+\newcommand{\Boxd}{\Box^{\downarrow}}
+\newcommand{\bs}{\backslash}
+\newcommand{\bo}{[}
+\newcommand{\bc}{]}
+
+\begin{document}
+
+
+
+\section{Example Sentences}
+
+\begin{tabular}{l}
+ \emph{zhejianyifu buliao bucuo.} $ \vdash \ st\rule[-.2ex]{0pt}{.9em}$ \\ 
+ \emph{youplclass we firstpickupyangfan.} $ \vdash \ st\rule[-.2ex]{0pt}{.9em}$ \\ 
+ \emph{jiu wo xihuanheguizhou de.} $ \vdash \ st\rule[-.2ex]{0pt}{.9em}$ \\ 
+\end{tabular}
+
+
+
+\section{Lexicon}
+
+\noindent \ensuremath{\textrm{bucuo} : np \bs_{0}s\rule[-.2ex]{0pt}{.9em} - \textbf{bucuo}} \\
+\noindent \ensuremath{\textrm{buliao} : np\rule[-.2ex]{0pt}{.9em} - \textbf{buliao}} \\
+\noindent \ensuremath{\textrm{de} : np /_{0}np\rule[-.2ex]{0pt}{.9em} - \textbf{de}} \\
+\noindent \ensuremath{\textrm{firstpickupyangfan} : np \bs_{0}s\rule[-.2ex]{0pt}{.9em} - \textbf{firstpickupyangfan}} \\
+\noindent \ensuremath{\textrm{jiu} : st /_{0}(s /_{0}np)\rule[-.2ex]{0pt}{.9em} - \textbf{jiu}} \\
+\noindent \ensuremath{\textrm{we} : np\rule[-.2ex]{0pt}{.9em} - \textbf{we}} \\
+\noindent \ensuremath{\textrm{wo} : np\rule[-.2ex]{0pt}{.9em} - \textbf{wo}} \\
+\noindent \ensuremath{\textrm{xihuanheguizhou} : (np \bs_{0}s) /_{0}np\rule[-.2ex]{0pt}{.9em} - \textbf{xihuanheguizhou}} \\
+\noindent \ensuremath{\textrm{youplclass} : st /_{0}(s /_{0}((np \bs_{0}s) \bs_{0}(np \bs_{0}s)))\rule[-.2ex]{0pt}{.9em} - \textbf{youplclass}} \\
+\noindent \ensuremath{\textrm{zhejianyifu} : st /_{0}((np /_{0}np) \bs_{0}s)\rule[-.2ex]{0pt}{.9em} - \textbf{zhejianyifu}} \\
+
+
+\section{Structural Rules}
+
+\begin{tabular}{r@{$\ \vdash \ $}ll}
+\ensuremath{(A\circ_{0}B)\circ_{0}C} & \ensuremath{A\circ_{0}(B\circ_{0}C)} & \ensuremath{[Ass]} \\
+\ensuremath{A\circ_{0}(B\circ_{0}C)} & \ensuremath{(A\circ_{0}B)\circ_{0}C} & \ensuremath{[Ass]} \\
+\end{tabular}
+
+
+\end{document}

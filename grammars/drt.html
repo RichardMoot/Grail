@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD> 
+    <META HTTP-EQUIV = "Pragma" CONTENT="no-cache"> 
+    <TITLE>Discourse Representation Theory</TITLE>
+</HEAD> 
+
+<BODY bgcolor=white text=black link="#2020FF" alink="#2020FF" vlink="#808080">
+
+<H2>Discourse Representation Theory</H2>
+
+<P>
+This grammar is an implementation of <A href="#muskens1994">Reinhard
+ Musken's ideas</A>
+ for adding discourse representation theory (DRT) as a semantics for the
+ Lambek calculus. It uses the simple associative Lambek calculus, but
+ in the interest of keeping the resulting representations a bit more
+ compact there is a strategic use of some non-associative implications
+ not found in the original paper.
+
+<P>
+Grail permits the use of discourse representation structures (DRSs) in
+its semantics using the following syntax.
+
+<P>
+<TT>
+drs(ListOfVariables, ListOfConditions)
+</TT>
+
+<P>
+So a DRS like the following
+
+<P>
+<TABLE border="1" cellspacing="0">
+ <TR>
+  <TD>
+  x
+  </TD>
+ </TR>
+ <TR>
+  <TD>
+  man(x) <BR>
+  enter(x)<BR>
+  smile(x)
+  </TD>
+ </TR>
+</TABLE>
+
+<P>will be represented as
+
+<P>
+<TT>
+drs([X], [man(X),enter(X),smile(X)])
+</TT>
+
+<P>whereas a slightly more complicated DRS with embedded DRSs and an
+  implication in the conditions
+
+
+<P>
+ will be represented as.
+
+
+<P>
+<H3>Remarks</H3>
+
+<UL>
+<LI>Note that there is currently no mechanism included to compute
+ the different possible bindings of the personal pronouns.
+
+<LI>Note as well that the grammar proposes multiple equivalent
+  readings for many sentences, since all <I>np</I>'s in the grammar
+  are lifted.
+</UL>
+
+<H3>References</H3>
+<A name="muskens1994">
+Muskens, R. (1994), `Categorial Grammar and Discourse Representation
+Theory', Proceedings COLING 1994, pp. 508-514.</A>
+</BODY>
+</HTML>

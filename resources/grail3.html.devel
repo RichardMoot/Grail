@@ -1,0 +1,264 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD> 
+    <META HTTP-EQUIV = "Pragma" CONTENT="no-cache"> 
+   <LINK REL="SHORTCUT ICON" TYPE="IMAGE/JPG" HREF="kundry_grail16.jpg">
+    <TITLE>Grail 3</TITLE>
+</HEAD> 
+
+<BODY bgcolor=black text=white link="#2020FF" alink="#2020FF" vlink="#808080">
+
+<CENTER>
+<P>
+<H2>G<SMALL>RAIL</SMALL> 3</H2>
+
+<IMG SRC="bar.gif" >
+<P>
+<A HREF="grail.au"><IMG src="kundry_grail.jpg"></A>
+<P>
+<IMG SRC="bar.gif" >
+</CENTER>
+
+<P>
+
+<H3>A<SMALL>BOUT</SMALL> G<SMALL>RAIL</SMALL> 3</H3>
+
+Grail is a modern, flexible and robust parser/automated theorem prover for
+multimodal categorial grammars. It is designed to allow students and
+researchers to design and experiment with their grammars while at the
+same time offer the advanced users many optional optimisation strategies.
+<P>
+
+Grail can be run either as a command line script or as an application
+with a graphical interface, with the possibility to follow Grail's partial
+parses/proof attemps interactively.
+
+<P>
+Send your comments, bug reports or feature requests to <A
+HREF="mailto:Richard.Moot@labri.fr">Richard.Moot@labri.fr</A>.
+
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+
+<H3>R<SMALL>EQUIREMENTS</SMALL></H3>
+
+You will need to have <A HREF="http://www.swi-prolog.org/">SWI
+Prolog</A> together with <A
+HREF="http://www.swi-prolog.org/packages/xpce/">SWI Prolog's XPCE user
+interface</A>
+installed on your computer to run Grail.
+
+<P>
+In addition you need the <A
+HREF="http://www.graphviz.org">GraphViz</A> set
+of graph display tools to view the graphs produced by Grail.
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+
+<H3>D<SMALL>OWNLOAD</SMALL></H3>
+
+Source code is provided under the <A
+href="http://www.gnu.org/copyleft/lesser.html">GNU Lesser General Public
+License</A>. 
+
+<P>
+
+The current distribution contains the @RELEASE_DATE@ release of Grail @GRAIL_VERSION@; it has been verified to work with @SWI_VERSION@,
+though everything should work properly on not-too-ancient SWI Prolog installations and for installations on other architectures as well.
+<P>
+
+<UL>
+<LI>
+<A href="grail3.tgz">Grail 3 Source Code Distribution</A> as gzipped tar-file.
+<LI>A <A href="grammars.tgz">set of example grammars</A> for Grail 3 as a gzipped tar-file.
+</UL>
+
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+
+<H3>I<SMALL>NSTALLATION</SMALL></H3>
+
+Move the Grail tarball into the directory where you want to install it
+and type.
+
+<P>
+<CODE>
+tar xfz grail3.tgz
+</CODE>
+
+<P>
+
+to extract all the necessary files from the archive.
+
+The preferred method of installation is by simply typing.
+
+<P>
+<CODE>
+./configure --prefix=/some/directory/
+</CODE>
+
+<P>
+where <CODE>/some/directory/</CODE> is an existing directory where you
+have write and execute permissions. Grail will be installed in the
+subdirectory <CODE>Grail</CODE> of this directory, whereas the executable will end up in the <CODE>bin</CODE> subdirectory. The prefix defaults
+to <CODE>/usr/local/</CODE>.
+
+<P>
+Continue by typing.
+
+<P>
+<CODE>
+make
+</CODE>
+
+<P>
+to compile the Grail files.
+
+Finally, type.
+
+<P>
+<CODE>
+make install
+</CODE>
+
+<P>
+to install all Grail files. Now you can start Grail by typing.
+
+<P>
+<CODE>g3</CODE>
+
+<P>or by
+
+<P>
+<CODE>/some/directory/bin/g3</CODE>
+
+<P>
+if your shell doesn't normally look at your installation path.
+Remember also that Grail will try to
+write its postscript files in the current working directory, so be
+sure to run Grail from a place where you have writing permission if
+you want to see the postscript output.
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+
+<H3>D<SMALL>OCUMENTATION</SMALL></H3>
+
+A short introduction to using Grail 3 can be found in the
+<A HREF="help.html">manual</A> or by selecting [Help/About Grail 3...]
+from Grail's menu bar.
+
+<P>
+A more comprehensive <A href="http://www.labri.fr/perso/moot/tutorial">tutorial</A> is currently under construction. 
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+
+<H3>C<SMALL>HANGES</SMALL> W<SMALL>ITH</SMALL> R<SMALL>ESPECT</SMALL>
+T<SMALL>O</SMALL> G<SMALL>RAIL</SMALL> 2</H3>
+
+<P>
+Grail 3 is a new implementation of the Grail engine, using many of the
+ideas first discussed in my <A HREF="http://www.library.uu.nl/digiarchief/dip/diss/1980438/inhoud.htm">thesis</A>. Notable improvements are:
+
+<UL>
+<LI> the way structural rules are applied in parallel
+<LI>  the different methods to filter out axiom connections which can never contribute to a proof net
+<LI> the default choice to connect the most restricted axiomatic formula first.
+</UL>
+
+
+<P>
+An advantage of the way the subderivations are shared in the current
+implementation is that Grail 3 functions as Grail 2 with the
+<A href="all_solutions.txt">all_solutions.pl</A> extension enabled, without incurring a performance
+penalty because of this.
+
+<P>
+The LaTeX natural deduction output of Grail 2 is currently not
+supported by Grail 3.
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+<P>
+
+<H3>A<SMALL>CKNOWLEDGMENTS</SMALL></H3>
+
+This research was made possible by the
+<A href="http://www.cnrs.fr/">Centre National de la Recherche
+  Scientifique</A> and the <A HREF="http://www.inria.fr/">Institut
+  National de Recherche en Informatique et en Automatique</A>.
+
+<P>
+
+The files <B>logarr.pl</B> (for logarithmic access arrays) <B>ordset.pl</B> (for
+ordered sets) and the warshall/2 predicate from <B>graph.pl</B> are modified versions of the libraries by the same name in the Public
+Domain DEC-10 Prolog Library. I am indebted to the authors of those
+packages for putting their work in the public domain. Any blame for changes and
+additions to their code is mine. See the individual files for changes.
+
+<P>
+The <B>tree234.pl</B> library for 2-3-4 trees is a direct adaptation of code belonging
+to the <A HREF="http://www.cs.mu.oz.au/research/mercury/">Mercury
+library</A>, a great resource for logic/functional programs of several
+standard algorithms, which is available under <A
+href="http://www.gnu.org/copyleft/lesser.html">LGPL</A> (Mercury itself is
+released under <A HREF="http://www.gnu.org/licenses/gpl.html">GPL</A>). 
+I am responsible for idiosyncratic additions to this code, as well as
+modification of the code to use first argument indexing as much as
+possible, in addition to any errors this may have produced.
+
+<P>
+<CENTER><IMG SRC="bar.gif" ></CENTER>
+<P>
+
+<H3>B<SMALL>ACKGROUND</SMALL> R<SMALL>EADING</SMALL></H3>
+
+<P>
+Moot, R. & Puite, Q. (2002), `Proof nets for the multimodal Lambek calculus', Studia Logica <B>71</B>(3), 415-442.
+<P>
+<I>
+This paper introduces the proof nets used by Grail 3.
+</I>
+<P>
+Moot, R. (2002), Proof Nets for Linguistic Analysis, PhD thesis, Utrecht Institute of Linguistics OTS, Utrecht University (<A href="moot02proofnets.ps">postscript</A>, <A href="moot02proofnets.pdf">pdf</A>).
+<P>
+<I>
+<A href="moot02ch7.pdf">Chapter 7</A> of my thesis discusses the proof
+nets used by Grail and their relation to other styles of proof nets, as
+well as proving some of the basic results.
+<A href="moot02ch8.pdf">Chapter 8</A> of my thesis contains a first set of
+ideas for using these proof nets for parsing multimodal categorial
+grammars which were included in Grail 3.
+</I>
+<P>
+Moot, R. (2004), Graph algorithms for improving type-logical proof search, `Proceedings of Categorial Grammars 2004', pp. 13-28, Submitted to Elsevier Science.
+<P>
+<I>
+This paper, first presented at Categorial Grammars 2004, includes <A href="moot04graph.pdf">new
+ideas for using graph algorithms</A>, notably the Floyd-Warshall and
+Kuhn-Munkres algorithm, to improve Grail's parsing performance.
+</I>
+<P>
+Moot, R. (2007), Filtering axiom links for proof nets, in Laura Kallmeyer, Paola Monachesi, Gerald Penn and Giorgio Satta, eds, `Proccedings of Formal Grammar 2007', to appear with CSLI. 
+<P>
+<I>
+This paper, a draft of an extended version of my Formal Grammar 2007 submission, proposes two new filtering algorithms, in addition to the ones
+previously implemented, and <A href="moot08ax.pdf">evaluates their combined performance</A> both
+against randomly generated sequents and sequents extracted from corpus.
+</I>
+<P>
+<CENTER>
+<IMG SRC="bar.gif" >
+<P>
+<A href="http://home.c2i.net/monsalvat/menu.htm"><IMG SRC="monsalvat2.gif">
+</A>	<P>
+<IMG SRC="bar.gif" >
+<P>
+</CENTER>
+<ADDRESS><A HREF="mailto:Richard.Moot&#064;labri.fr">Richard.Moot&#064;labri.fr</A></ADDRESS>
+</BODY>
+</HTML>

@@ -1,0 +1,361 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Grail Help</title>
+</head>
+
+<body>
+
+<A name="top"></A>
+<CENTER>
+<h1>Grail Help</h1>
+
+<IMG src="monsalvat2.gif">
+</CENTER>
+
+<A name="contents"></A>
+<h2>Contents</h2>
+
+<ul>
+  <li><A href="#tlg">Type-Logical Grammars</A>
+    <ul>
+      <li><A href="#loadsave">Loading and Saving Files</A></li>
+      <li><A href="#inspectlex">Inspecting the Lexicon</A></li>
+      <li><A href="#lexgraphs">Lexical Graphs</A></li>
+    </ul>
+  </li>
+  <li><A href="#design">Designing Grammars</A>
+    <ul>
+      <li><A href="#copydelete">Copying and Deleting</A></li>
+      <li><A href="#basic">Basic Lexical Entries</A></li>
+      <li><A href="#complex">Complex Lexical Entries</A></li>
+    </ul>
+  </li>
+  <li><A href="#parsing">Interactive Parsing</A>
+    <ul>
+      <li><A href="#axioms">Axiom Connections</A></li>
+      <li><A href="#rewrites">Structural Rewrites</A></li>
+      <li><A href="#contractions">Contractions</A></li>
+    </ul>
+  </li>
+</ul>
+
+<h2>About Grail</h2>
+
+Grail is a parser/automated theorem prover for <A
+href="#tlg">type-logical grammars</A>. This guide will give you a brief
+introduction on how to use it to <A href="#design">design</A> and <A href="#parsing">test</A> your own grammars.
+
+<P>
+The help file page been written for Grail 3.1.1 and contains the information you need to get started quickly. A more detailed introduction to Grail can be found in the <A href="http://www.labri.fr/perso/moot/tutorial">tutorial</A>.
+Clicking a hyperlink marked <I>more information</I> in one of the section
+headers for this document will take you to the corresponding section in the
+tutorial.
+
+<A name="tlg"></A>
+<h2>Type-Logical Grammars (<A href="#contents">top</A>)</h2>
+
+
+Type-logical grammars are a way of designing grammars using logic. In
+this section, we will briefly look at how these grammars are
+represented in Grail.
+
+<P>
+
+<A name="loadsave"></A>
+<h4>Loading and Saving Files (<A href="http://www.labri.fr/perso/moot/tutorial/grammars.html">more information</A>, <A href="#contents">top</A>)</h4>
+
+You can load a file by selecting [File/Load...] from the menu or by
+pressing the <B>[Load]</B> button on the main window. A file
+selection dialog will appear which allows you to select a
+filename.
+
+<P>
+By default only Prolog files, with a <EM>.pl</EM> extension
+are shown in the right column. The left column shows the
+subdirectories  of the current directory. Double-click on a filename
+or click on a filename and press the <B>[Open]</B> button to load the
+file.
+
+<P>
+Saving a file is done by selecting [File/Save...] from the menu. An
+extra confirmation is necessary to overwrite an existing file.
+
+<A name="inspectlex"></A>
+<h4>Inspecting the Lexicon (<A href="http://www.labri.fr/perso/moot/tutorial/grammars.html#inspecting">more information</A>, <A href="#contents">top</A>)</h4>
+
+You can inspect the lexicon by pressing the <B>[Lexicon]</B> button
+from the main window. This opens the lexicon window, containing a
+list of all the word currently in the lexicon in alphabetic order.
+
+<P>
+
+Pressing the left mouse button on an entry, or using the cursor keys
+to select the entry you're interested in, followed by &lt;Enter&gt;
+will cause the lexical graphs for this entry to appear in the ghosview
+window.
+
+<A name="lexgraphs"></A>
+<h4>Lexical Graphs(<A href="http://www.labri.fr/perso/moot/tutorial/AB.html">more information</A>, <A href="#contents">top</A>)</h4>
+
+<IMG align="left" src="arthur.jpg" alt="Elementary lexical tree">The simplest possible type of lexical entry in our grammars is an
+elementary word like <EM>arthur</EM>, which we is a basic expression
+of type <B>np</B>, for noun phrase. 
+
+<P>
+There is a number 1 assigned to the lexical node,
+which is just a unique identifier to distinguish it from all other
+nodes, for example from another occurrence of the same
+word.
+
+<P>
+Note also that the <B>np</B> category is on the top, indicating
+it is something we <EM>have</EM> as upposed to something we are
+<EM>searching</EM>, which would be indicated by a category at the
+bottom.
+
+<P>
+
+<IMG align="left" src="represses.jpg" alt="Incomplete
+lexical tree">A slightly more complicated lexical entry would be given to the word
+<EM>represses</EM>. 
+Here the result category, at the bottom, is <B>s</B>,
+for sentence.
+
+<P>
+It is an incomplete lexical entry, however. It searches
+for two noun phrases - like the entry for <EM>arthur</EM> we have seen
+before - to produce this sentence.
+
+<P>
+
+The lexical entry here is just a tree, but there are some extra
+observations to make about the representation of the lexical graph.
+
+<P>
+
+The numbers <EM>1</EM> and <EM>2</EM> next
+to the connections of the two central nodes indicate the order of the
+two nodes at the end of this connections. This means that the
+<B>np</B> which is marked as 6 comes after the lexical anchor
+<EM>represses</EM>, whereas the <B>np</B> marked 5 will be before
+node 3. In this case, the left to right ordering is visible directly
+in the image, but the graph display algorithm can sometimes decide to
+portray things differently. 
+
+<P>
+The label 3 to identifies the bottom (conclusion) of every
+link. Most of the time,
+however, the graph will be portrayed in such a way that this
+information is redundant.
+
+<A name="design"></A>
+<h2>Designing Grammars (<A href="http://www.labri.fr/perso/moot/tutorial/editing.html">more information</A>, <A href="#contents">top</A>)</h2>
+
+Grail allows you to change the grammar you have loaded from the
+lexicon window by adding and deleting lexical entries.
+
+<A name="copydelete"></A>
+<h4>Copying and Deleting Entries(<A href="#contents">top</A>)</h4>
+
+The simplest way to add a new lexical entry to your grammar is to
+find a word in the lexicon which has the lexical graph you would want
+to assign to this new word, enter the word in the <EM>Word</EM> entry
+field and then select [Edit/Store Entry] from the menu.
+
+<p>
+
+Deleting an entry is done simply be selecting the word with the left
+mouse button or the cursor keys and then selecting [Edit/Delete
+Entry] from the menu. This will delete all lexical graphs for the
+selected word.
+
+<A name="basic"></A>
+<h4>Basic Lexical Entries (<A href="#contents">top</A>)</h4>
+
+To enter a new lexical item from scratch, type in the word you want
+to define in the <EM>Word</EM> field, followed by the &lt;Enter&gt; key, or
+select [Edit/New Entry] from the menu. You will see a graph with the
+word you entered which is assigned <B>*</B>. The <B>*</B> indicates
+the insertion point and will be the point from where we extend our
+lexical graph. In the case our graph has multiple insertion points,
+insertion will take place at the point marked <B>*</B> and shown in blue.
+Other insertion points will be marked <B>-</B> and shown in black.
+
+<p>
+
+To assign a word to a basic category, you can simply type this category
+in the <EM>Formula</EM> field. You can also select previously defined
+basic categories by clicking on the menu arrow to the right of this
+text entry field.
+
+<p>
+
+Pressing &lt;Enter&gt; or selecting a category from the menu will
+complete the entry. Grail will ask if you want to store the entry in
+the lexicon. Select [Ok] to store or [Cancel] to continue editing.
+
+<p>
+
+The undo button <IMG src="undo.gif" alt="Undo Button" border=1> allows you to
+undo your last insertion.
+
+<A name="complex"></A>
+<h4>Complex Lexical Entries (<A href="#contents">top</A>)</h4>
+
+The row of icons at the bottom of the lexicon window are for
+generating complex lexical entries. Start editing like before, by
+selecting either [Edit/New Entry] or typing a word followed by
+&lt;Enter&gt;.
+
+<p>
+
+Grail allows you to make complex entries using different modes. Modes
+play a role not unlike that of grammatical features. The
+<EM>Mode</EM> entry field allows you to type in a mode or to select a
+mode which has been previously used in the grammar.
+
+<P>
+After having selected a mode, you have the choice of three ways of
+performing a binary branching and two of performing a unary
+branching. The arrow in the image indicates the position of the
+current insertion point. So pressing the <IMG src="tensor_left.gif"
+alt="Right division button"> button, followed by the <IMG
+src="tensor_right.gif" alt="Left division button"> button
+will produce the tree for <EM>represses</EM> we have seen before after
+inserting the appropriate simple categories using the <EM>Formula</EM>
+field.
+
+<P>
+There is a distinction between the white and the black connections. The
+black nodes have to be remove by <A href="#contractions">contractions</A>: a black and a white connection will
+cancel out eachother if they are connected at all nodes except the
+node on the black connections to which the arrow is pointing.
+
+<P>
+Like with simple entries, the undo button <IMG src="undo.gif"
+alt="Undo Button" border=1> allows you to remove the last connection
+you have added.
+
+
+<A name="parsing"></A>
+<h2>Interactive Parsing (<A href="http://www.labri.fr/perso/moot/tutorial/ABparsing.html">more information</A>, <A href="#contents">top</A>)</h2>
+
+You control the parser from the main window. Your grammar will
+typically specify a number of example sentences to parse.
+
+<P>
+By clicking on an example sentence, it will appear next to
+<EM>Phrase</EM> in the main window, whereas the target category will
+appear next <EM>Goal</EM>.
+
+<P>
+Double-clicking on an example phrase will start the parser with this
+sentence immediately.
+
+<P>
+Alternatively, you can enter a phrase and a goal formula yourself and
+then press the <B>[Parse]</B> button. Note that by using the small menu next to <EM>Goal</EM> you can select one of the formulas in
+the fragment.
+
+<P>
+Grail will search your lexicon for the words of the phrase and
+complain if a word does not appear there. If a similar word appears
+in the lexicon (different by one character or by two characters being
+reversed, for example) you can continue using the lexical graphs for
+this word instead. If you do not want this press [Cancel] and edit
+either you lexical or your phrase.
+
+<P>
+Grail will then show you the lexical graphs for all words and the
+axiom connection stage will begin.
+
+<A name="axioms"></A>
+<h4>Axiom Connections (<A href="#contents">top</A>)</h4>
+
+For the axiom connections, the goal is to connect all input formulas,
+which are below the node numbers, to an output formula of the same
+type, which is displayed above the node number. This has to be done in
+such a way that it produces a tree with the words of the phrase as
+its leaves and [Goal] as its root.
+
+<P>
+Grail will list all possible connections which have not been tried yet
+in a window and allows you to select which connection to
+perform. Note that some fields are blank. This indicates that you have
+either already tried to perform this connection or that Grail has
+determined this connection can never be use to produce a tree: by
+introducing a cycle, for example.
+
+<P>
+You can reject the current lexical lookup altogether by closing the
+window. This will cause Grail to search for alternate lexical entries
+or to fail if all alternatives have already been tried.
+
+<P>
+After all formulas have been connected Grail will perform the
+structural rewrites.
+
+<A name="rewrites"></A>
+<h4>Structural rewrites (<A href="#contents">top</A>)</h4>
+
+In order have enough expressivity to handle linguistic phenomena
+like, for example, long-distance dependencies and quantifier raising,
+your grammar can specify any number of structural rewrites. These
+rewrites can permit you, for example, to change on mode into another
+or to change the structure of the trees.
+
+<p>
+Grail will perform the structural rules permitted by your fragment
+automatically and give a single representation for all the structural
+possibilities. In this graph there can be multiple connections going
+up from a single node, which will represent a choice between several
+trees.
+
+<p>
+If this graph gets too dense, you might prefer to change the graph
+mode in [Options/Graph Mode] to distributed.
+
+
+<A name="contractions"></A>
+<h4>Contractions (<A href="#contents">top</A>)</h4>
+
+Finally, we need to remove the solid constructors by their
+appropriate contractions. Certain constructors are said to be
+<EM>active</EM>, which is indicated in the graph by the color
+blue. Grail uses the property that if a total contraction of the
+solid constructors in the graph exists, it can be found by only
+contracting active conctructors, which, in its turn, can cause other
+constructors to become active.
+
+<p>
+
+When there are multiple active constructors, you can select which one
+to contact.
+Be aware that selecting the wrong contraction can lead to a dead end,
+so plan ahead when selecting the contractions.
+
+<p>
+
+Performing a contraction can make new structural rewrites
+possible. So after each contraction Grail will perform any new
+rewrites and give you a new choice for a contraction.
+
+<P>
+
+Finally, when all contractions have been performed, Grail will
+perform the structural rewrites once more. The graph will be a
+representation of al structural configurations - including word order
+- for the current reading of the phrase.
+
+<p>
+If alternate untried axiom links exist, you will be given the
+opportunity to try and generate a different solution.
+
+<CENTER>
+<IMG src="kundry_grail.jpg">
+</CENTER>
+
+<hr>
+<address>Richard.Moot@labri.fr</address>
+<!-- hhmts start -->Last modified: Sun Aug 15 21:13:55 CEST 2004 <!-- hhmts end -->
+</body> </html>

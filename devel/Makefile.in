@@ -1,0 +1,153 @@
+
+TOP := $(shell pwd)
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+bindir      = @bindir@
+datarootdir = @datarootdir@
+datadir     = @datadir@/Grail
+
+configfiles = Grail/configure Grail/configure.ac Grail/Makefile.in \
+	      Grail/source/insertdot.in Grail/source/g3.in \
+              Grail/configure.ac Grail/configure Grail/Makefile.in
+grailfiles  = Grail/source/log16arr.pl Grail/source/disjsetb16.pl \
+              Grail/source/tree234.pl Grail/source/graph.pl \
+              Grail/source/ordset.pl Grail/source/heap.pl \
+              Grail/source/lexicon.pl Grail/source/latex.pl \
+	      Grail/source/options.pl \
+              Grail/source/prob_lex.pl Grail/source/tokenize.pl \
+              Grail/source/grail_dot.pl Grail/source/grail_xpce.pl \
+              Grail/source/pp.pl Grail/source/oldpostulate.pl \
+              Grail/source/sem_utils.pl Grail/source/chart.pl \
+              Grail/source/list_utils.pl \
+              Grail/README Grail/RELNOTES Grail/LICENSE
+lightfiles  = Grail/source/grail_light.pl Grail/source/grail_light_cr.pl \
+              Grail/source/ordset.pl Grail/source/heap.pl \
+              Grail/source/lexicon.pl Grail/source/latex.pl \
+              Grail/source/prob_lex.pl Grail/source/grail_dot.pl \
+              Grail/source/sem_utils.pl Grail/source/list_utils.pl \
+	      Grail/source/options.pl Grail/source/tree234.pl \
+              Grail/README Grail/RELNOTES Grail/LICENSE
+develfiles  = Grail/README.devel Grail/grammars/README.devel \
+              Makefile.in Makefile Grail/Makefile \
+              Grail/source/g3.in.devel Grail/resources/grail3.html.devel \
+              Grail/resources/grail3.html \
+              Grail/grammars.tgz Grail/TODO
+resources   = Grail/resources/help.html Grail/resources/grail3.ps \
+              Grail/resources/grail3.dot
+images      = Grail/images/arthur.jpg Grail/images/represses.jpg \
+              Grail/images/kundry_grail.jpg Grail/images/monsalvat2.gif \
+              Grail/images/par_left.xpm Grail/images/par_right.xpm \
+              Grail/images/par_up.xpm Grail/images/u_par_down.xpm \
+              Grail/images/u_par_up.xpm Grail/images/ffwd.xpm \
+              Grail/images/tensor_down.xpm Grail/images/tensor_left.xpm \
+              Grail/images/tensor_right.xpm  Grail/images/u_tensor_down.xpm \
+              Grail/images/u_tensor_up.xpm Grail/images/undo.gif \
+              Grail/images/undo.xpm Grail/images/next.xpm \
+              Grail/images/stop.xpm Grail/images/previous.xpm \
+              Grail/images/play.xpm Grail/images/someone.jpg \
+              Grail/images/tensor_left.gif Grail/images/tensor_right.gif
+grammarfiles = Grail/grammars/dutch.html Grail/grammars/engproncase1.pl \
+               Grail/grammars/engproncase2.pl Grail/grammars/grail0.pl \
+               Grail/grammars/hitchhiker.pl Grail/grammars/film_db.pl \
+               Grail/grammars/q.pl Grail/grammars/semantics.pl Grail/grammars/dutch.pl \
+               Grail/grammars/grail0.html Grail/grammars/q.html Grail/grammars/pentus.pl \
+               Grail/grammars/savateev.pl Grail/grammars/drt.pl Grail/grammars/itipy.pl \
+               Grail/grammars/dynamics.pl Grail/grammars/drt_assoc.pl \
+               Grail/grammars/clitics.pl Grail/grammars/clitics_simple.pl \
+               Grail/grammars/README Grail/grammars/LICENSE
+
+package_version = @PACKAGE_VERSION@
+grail_year = @GRAIL_YEAR@
+
+rel_date := $(shell date +"%e %B %Y (%H:%M:%S %Z)" | tr -s " " | sed 's/^[ ]//g')
+swi_version := $(shell swipl -v)
+
+# perform substitutions explicitly
+edit = @SED@ \
+        -e 's,@graildatadir\@,$(datadir),g' \
+        -e 's,@grailbindir\@,$(bindir),g'
+
+dev2usr = @SED@ \
+        -e 's,@GRAIL_VERSION\@,$(package_version),g' \
+        -e 's,@COPYRIGHT_YEAR\@,$(grail_year),g' \
+        -e 's,@RELEASE_DATE\@,$(rel_date),g' \
+        -e 's,@SWI_VERSION\@,$(swi_version),g'
+addf = @SED@ \
+	-e 's,~/checkout/Grail/grammars/big_french_drt.pl,../grammars/big_french_drt,g'
+
+.PHONY: all install user release clean realclean
+
+# apply recursive make
+
+all:
+	cd Grail; make all
+
+install:
+	cd Grail ; make install
+
+# create grail3.ps from grail3.dot if necessary
+
+grail3.ps: Grail/grail3.dot
+	cd Grail/resources/ ; @DOT@ -Tps2 grail3.dot > grail3.ps
+
+# create configure from configure.ac if necessary
+
+configure: configure.ac
+	autoconf configure.ac > configure
+
+# only auxiliary dot files are deleted right now; postscript files and
+# the Grail 3 source files will stay where they are. In principle, all
+# files - except those in $(datadir) and $(bindir) - can be deleted.
+
+clean:
+	cd Grail ; make clean
+
+realclean:
+	cd Grail ; make realclean
+
+# =========================================================
+# =   Developer Only - Creating and Releasing Tarballs    =
+# =========================================================
+
+user: Grail/source/g3.in.devel Grail/resources/grail3.html.devel Grail/README.devel
+	cd Grail ; make user
+
+g3.in: g3.in.devel
+	-cd Grail/source ; $(dev2usr) g3.in.devel > g3.in
+
+Grail/source/chart_var_lp.pl: Grail/source/chart_var.pl
+	cd Grail/source ; @SED@ -e 's/%LP//g' chart_var.pl > chart_var_lp.pl
+Grail/source/chart_var_cr.pl: Grail/source/chart_var.pl
+	cd Grail/source ; @SED@ -e 's/%CR//g' chart_var.pl > chart_var_cr.pl
+
+Grail/source/grail_light.pl: Grail/source/chart_var_lp.pl
+	-cd Grail/source ; $(addf) chart_var_lp.pl > grail_light.pl
+Grail/source/grail_light_cr.pl: Grail/source/chart_var_cr.pl
+	-cd Grail/source ; $(addf) chart_var_cr.pl > grail_light_cr.pl
+
+
+Grail/README: Grail/README.devel
+	$(dev2usr) README.devel > README
+
+Grail/grammars/README: Grail/grammars/README.devel
+	cd Grail/grammars ; $(dev2usr) README.devel > README
+
+Grail/grammars.tgz: $(grammarfiles)
+	-cd Grail ; make grammars.tgz
+
+grail_light.tgz: $(lightfiles) Grail/grammars/big_french_drt.pl Grail/grammars/french_roles.pl
+	tar cvfz grail_light.tgz $(lightfiles) Grail/grammars/big_french_drt.pl Grail/grammars/french_roles.pl
+
+grail3.tgz: Grail/grammars.tgz $(configfiles) $(grailfiles) $(resources) $(images) $(develfiles)
+	-mv grail3.tgz Grail/backups/grail3.tgz.`date +%Y%m%d`
+	-mv grail3devel.tgz Grail/backups/grail3devel.tgz.`date +%Y%m%d`
+	make user
+	tar cfz grail3.tgz $(configfiles) $(grailfiles) $(resources) $(images)
+	tar cfz grail3devel.tgz $(configfiles) $(develfiles) $(grailfiles) $(resources) $(images) Grail/grammars.tgz
+	cp -f grail3.tgz Programs/html/grail3.tgz
+	cp -f Grail/resources/grail3.html Programs/html/grail3.html
+
+release:
+	make Grail/grammars.tgz
+	make grail3.tgz
+	make grail_light.tgz

@@ -1,0 +1,5312 @@
+#@SWIPL@ -q -g start -f
+% -*- Mode: Prolog -*-
+% =====================
+% =    Grail @GRAIL_VERSION@    =
+% =====================
+
+% Grail @GRAIL_VERSION@ Type-Logical Theorem Prover
+% Copyright (C) 2003-@COPYRIGHT_YEAR@ Richard Moot (Richard.Moot@labri.fr)
+% Copyright (C) 2004-@COPYRIGHT_YEAR@ CNRS         (http://www.cnrs.fr)
+% Copyright (C) 2003-2011 INRIA        (http://www.inria.fr)
+
+% This library is free software; you can redistribute it and/or
+% modify it under the terms of the GNU Lesser General Public
+% License as published by the Free Software Foundation; either
+% version 2.1 of the License, or (at your option) any later version.
+
+% This library is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+% Lesser General Public License for more details.
+
+% You should have received a copy of the GNU Lesser General Public
+% License along with this library; if not, write to the Free Software
+% Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+% = use ISO Latin 1 for accented characters
+%   the file tokenize.pl makes the assumption of an ISO Latin 1
+%   encoding at the moment, though this may change at a future
+%   version to include full Unicode support.
+
+% :- set_prolog_flag(encoding, iso_latin_1).
+
+% = use UTF-8 encoding for accented characters; changed from the
+%   previous version, since it facilitates interoperations between
+%   the different tools (tcsh, with LANG set to en_GB.UTF-8, dot, which
+%   works with UTF-8 by default and LaTeX with fontenc set to UTF-8)
+
+:- set_prolog_flag(encoding, utf8).
+
+% = directory where the xpce images are stored.
+
+:- pce_image_directory('@graildatadir@').
+
+% = load predicates from the different modules.
+
+:- use_module(library(pce)).
+:- use_module(library(autowin)).
+:- use_module(library(tabular)).
+:- use_module(library(pce)).
+:- use_module(library(pce_util)).
+:- use_module(library(pce_image)).
+:- use_module(library(pce_tick_box)).
+:- use_module(library(hyper)).
+:- use_module(library('doc/load')).
+:- use_module(library('plot/barchart')).
+:- use_module(doc(html)).
+:- use_module(doc(url_fetch)).
+:- use_module(library(sgml)).
+:- use_module(doc(browser)).
+:- use_module(doc(window)).
+
+:- pce_autoload(finder, library(find_file)).
+:- pce_autoload(tool_bar, library(toolbar)).
+:- pce_autoload_all.
+
+:- use_module(options,    [create_options/0,
+			   get_option/2,
+			   set_option/2,
+			   set_option/4,
+			   option_true/1,
+			   set_option_true/1,
+			   set_option_false/1]).
+:- use_module(log16arr,   [new_array/1,
+                           aref/3,
+	                   aset/4,
+			   map_array/3,
+	                   array_to_list/2,
+		           list_to_array/2]).
+:- use_module(disjsetb16, [ds_init/1,
+                           ds_new/3,
+			   ds_find/4,
+			   ds_add/4,
+			   ds_link/4]).
+:- use_module(tree234,    [list_to_btree/2,
+	                   btree_to_list/2,
+			   btree_count/2,
+		           btree_member/3,
+		           btree_get/3,
+			   btree_get_replace/5,
+			   btree_insert/4,
+			   btree_update/4,
+		           btree_put/4,
+		           btree_remove/4,
+			   btree_delete/3,
+			   btree_foldl/4,
+			   btree_keys/2,
+		           btree_merge/3,
+			   btree_subtract/3]).
+:- use_module(ordset,     [ord_member/2,
+	                   ord_key_member/3,
+                           ord_insert/3,
+			   ord_dup_insert/3,
+			   ord_select/3,
+			   ord_subtract/3,
+			   ord_intersect/3,
+			   ord_symdiff/3,
+			   ord_subset/2,
+	                   ord_union/3,
+			   ord_key_union/3,
+			   ord_key_union_i/3,
+			   ord_key_delete/3,
+			   ord_key_insert/4]).
+:- use_module(list_utils, [strip_values/2,
+			   strip_keys/2,
+			   my_member/2,
+			   merge_lists/3,
+			   select1/3,
+			   select_all/3,
+			   split_odds_evens/3,
+			   split_a_b_cs/4,
+			   split_a_b_c_ds/5]).
+:- use_module(chart,      [grail_chart/1,
+			   chart_parse_all/0,
+			   chart_parse_all_dl/1,
+			   prob_parse/2]).
+:- use_module(graph,      [kbest/5,
+	                   hungarian/4,
+			   regin/4,
+                           rt_closure/2,
+                           floyd_warshall/2]).
+:- use_module(lexicon,    [lookup/4,
+	                   cmd_lookup/5,
+			   cmd_lookup_sem/7,
+	                   macro_expand/2,
+			   is_formula/1]).
+%:- use_module(auto_expand, [auto_expand/6]).
+:- use_module(prob_lex,   [prob_parse/1,
+			   parse_pos_lemma/1]).
+:- use_module(sem_utils,  [reduce_sem/2,
+	                   sem_to_prolog/3,
+			   check_lexicon_typing/0]).
+:- use_module(tokenize,   [tokenize_string/2, 
+                           tokenize_term/2,
+			   read_line/2]).
+:- use_module(grail_xpce, [user_link/4,
+	                   user_select_par/3,
+			   open_main_window/0,
+			   open_stats_window/0,
+			   update_lex_window/0,
+			   main_loop/0,
+			   set_option/4,
+			   kbest_dialog/1]).
+:- use_module(grail_dot,  [dot_structural_rules/1,
+			   reportray_graph/0,
+	                   portray_graph/8,
+			   portray_graph/10,
+	                   portray_graph_c/8,
+			   portray_graph_c/10,
+			   show_lookup/3,
+			   portray_structural_rules/5,
+			   erase_dot_files/0]).
+:- use_module(latex,      [latex_header/1,
+			   latex_header/2,
+	                   latex_header_t/2,
+			   latex_header_tab/2,
+			   latex_tail/1,
+			   latex_tail_t/1,
+			   latex_tail_tab/1,
+			   latex_section/2,
+			   latex_sentences/2,
+			   latex_print_sentence/4,
+			   latex_lexicon/2,
+			   latex_structural_rules/2,
+			   latex_init_ex_counter/1,
+			   latex_set_ex_counter/2,
+			   latex_step_ex_counter/1,
+			   latex_structural_rules/2,
+			   latex_semantics/3]).
+:- use_module(library(statistics), [time/1]).
+
+:- use_module(library(unix)).
+:- use_module(library(lists)).
+:- use_module(library(listing)).
+:- use_module(library(swi_compatibility)).
+:- use_module(library(gensym)).
+
+:- ensure_loaded(pp).
+:- ensure_loaded(oldpostulate).
+
+% = dynamic predicates
+
+:- dynamic '$CHART_ALL'/1, '$CHART_FAIL'/1, '$CHART_LIMIT'/1.
+:- dynamic '$DOTFILE'/1, '$DOTPREFIX'/1, '$EXNO'/1, '$PS'/1, '$LOOKUP'/1.
+:- dynamic '$SOLUTION'/1, '$VIOL_ACC'/1, '$VIOL_CONTR'/1, '$VIOL_ORDER'/1.
+:- dynamic '$VIOL_TOT'/1, '$AXIOMS'/1, '$AXIOM_LIST'/1, '$AXIOM_SOL'/1.
+:- dynamic '$START_CPU'/1, '$MAX_CPU'/1, '$START_INF'/1, '$MAX_INF'/1.
+:- dynamic '$MAX_GEN'/1, custom_first_order/4, grammar_help/1.
+:- dynamic conversion/4, lex/3, example/2, macro/2.
+:- dynamic atomic_type/2, special_term_type/2.
+:- dynamic entity_type/1, state_type/1, boolean_type/1.
+:- dynamic example_phrase/3, example_phrase/4, example_phrase/5.
+:- dynamic sentence_category/2.
+:- dynamic current_fragment/1, current_link_mode/1.
+:- dynamic continuous/1, continuous_dia/1.
+:- dynamic inert/1, inert_dia/1, external/1, external_dia/1.
+:- dynamic root_form/2, default_semantics/3, default_semantics/4.
+:- dynamic sequence_semantics/6, solution_semantics_hook/2.
+:- dynamic auto_expand/1, manual_expand/1.
+:- dynamic translate_form/2, translate_sem/2.
+:- dynamic xpce_html/0, invisible_mode/1.
+
+:- assert(manual_expand(no)).
+:- assert(display_unreduced_semantics(no)).
+:- assert(display_underivable_semantics(no)).
+:- create_options.
+
+@HTML@
+
+% ===================================================================
+% =                          Main Window                            =
+% ===================================================================
+
+welcome :- 
+	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail @GRAIL_VERSION@']),
+	format('Release: @RELEASE_DATE@~n', []).
+
+start :-
+	welcome,
+	retractall('$DOTPREFIX'(_)),
+	assert('$DOTPREFIX'('')),
+	retractall('$DOTFILE'(_)),
+	assert('$DOTFILE'(0)),
+	retractall('$EXNO'(_)),
+	assert('$EXNO'(1)),
+	new_output_file(grail_log, log),
+	default_image,
+	open_main_window,
+	current_prolog_flag(argv, [_|Argv]),
+	open_stats_window,
+	process_arguments(Argv),
+	get_option(gv, GV),
+	new_postscript_window(GV, tmp),
+	main_loop.
+
+cleanup :-
+	close(log),
+	kill_postscript_windows,
+    (
+	'$SOLUTION'(0)
+    ->
+	halt(1)
+    ;
+	halt(0)
+    ).
+
+disable_all_optimization :-
+	retractall(custom_first_order(_,_,_,_)),
+	retractall(continuous(_)),
+	retractall(continuous_dia(_)),
+	retractall(inert(_)),
+	retractall(inert_dia(_)),
+	retractall(external(_)),
+	retractall(external_dia(_)),
+	assert(external(_)),
+	assert(external_dia(_)).
+
+shell_warn(Cmd) :-
+	shell(Cmd, Exit),
+    (
+        Exit = 0
+    ->
+        true
+    ;
+        format(user_err, '{Warning: Shell command failed "~w"}~n', [Cmd])
+    ).
+     
+% ===================================================================
+% =                      Command Line Interface                     =
+% ===================================================================
+
+% process_arguments(+Argv)
+%
+% process the comment line arguments to Grail
+% currently supported arguments are:
+%
+% * debugging *
+%
+% spy Predicate      place a spypoint on Predicate, then start Grail
+% trace              trace Grail's execution.
+% noopt              disable all optimization (to be used *after*
+%                    consulting a grammar!)
+%
+% * ghostview *
+%
+% gv                 use gv to portray the postscript files               
+% nogv               don't portray the postscript files; use this if
+%                    you use another program to display the Dot files.
+%
+% stats              portray parse statistics in a separated window.
+% nostats            don't portray parse statistics.
+%
+% * loading grammar fragments *
+%
+% fragment FileName  all three of these load the grammar file
+% file FileName      FileName into memory.
+% grammar FileName
+% supertag FileName
+%
+% * parsing sequents/sentences *
+%
+% example Int        parse example number Int from the grammar file.
+% prove Antecedent   start a proof attempt of Antecedent being either
+%                    of type s or of type np.
+% provegoal G Ant    prove antecedent Ant to be of goal type G.
+%
+% * execution options *
+% 
+% link LinkMode      sets the link mode either to `auto' (Grail does all
+%                    axiom links automatically) `kbest' (Grail only
+%                    performs the best k axiom links) or `xpce' (the
+%                    use performs all axiom links manually).
+% expr KBestExpr     sets the value of k for the k best number of axiom
+%                    links. k can be any mathematical expression (as
+%                    accepted by `is') with at most a single free
+%                    variable which will be instantiated at runtime
+%                    with the total number of atomic formulas in the
+%                    sequent.
+% par ParMode        sets the par mode (for determining the order of
+%                    the par contractions in case of multiple active
+%                    par links) either to `auto' (Grail takes care of
+%                    everything) or `xpce' (interactive user input).
+% regin OnOff        sets Regin's coherence filtering algorithm on or
+%                    off.
+% zeroheap OnOff     if on, fail for heaps where an item has no axiom link 
+%                    possibilities
+
+process_arguments(Argv) :-
+	format('~w~n', [Argv]),
+	process_arguments1(Argv).
+
+process_arguments1([]).
+process_arguments1([A|As0]) :-
+	process_argument(A, As0, As),
+	process_arguments1(As).
+
+% call Prolog goal
+process_argument(prolog, [CallAtom|As], As) :-
+	!,
+	atom_to_term(CallAtom, Call, []),
+	call(Call).
+% spy on a Predicate using SWI Prolog graphical user interface
+process_argument(guispy, [Pred|As], As) :-
+	!,
+	guitracer,
+	spy(Pred).
+% spy on a Predicate (without graphical interface)
+process_argument(spy, [Pred|As], As) :-
+	!,
+	noguitracer,
+	spy(Pred).
+% trace Grail execution
+process_argument(trace, As, As) :-
+	!,
+	trace.
+% trace Grail execution
+process_argument(noopt, As, As) :-
+	!,
+	disable_all_optimization.
+% open a Ghostview and use postscript output (yes/no)
+process_argument(gv, As, As) :-
+	!,
+	set_option_true(gv).
+process_argument(nogv, As, As) :-
+	!,
+	set_option_false(gv).
+% sort the LaTeX lexicon ouput by type or alphabetically
+process_argument(alphalex, As, As) :-
+	!,
+	set_option_false(lex_by_type).
+process_argument(typelex, As, As) :-
+	!,
+	set_option_true(lex_by_type).
+% use pdfLaTeX (yes/no)
+process_argument(latex, As, As) :-
+	!,
+	set_option_true(latex).
+process_argument(nolatex, As, As) :-
+	!,
+	set_option_false(latex).
+% use XPCE/html
+process_argument(html, As, As) :-
+	!,
+	retractall(xpce_html),
+	assert(xpce_html).
+process_argument(nohtml, As, As) :-
+	!,
+	retractall(xpce_html).
+% LaTeX paper size used for the semantics
+process_argument(papersize, [Size|As], As) :-
+	!,
+    (
+	Size = a4paper
+    ->
+	set_option(paper_size, a4paper, @paperm, 'A4 paper')
+    ;
+	Size = a3paper
+    ->
+	set_option(paper_size, a3paper, @paperm, 'A3 paper')
+    ;
+	Size = a2paper
+    ->
+	set_option(paper_size, a2paper, @paperm, 'A2 paper')
+    ;
+	Size = a1paper
+    ->
+	set_option(paper_size, a1paper, @paperm, 'A1 paper')
+    ;
+	Size = a0paper
+    ->
+	set_option(paper_size, a0paper, @paperm, 'A0 paper')
+    ;        
+	format(user_error, '{Error: unknown paper size "~w", defaulting to a3 paper}~n', [Size]),
+	set_option(paper_size, a3paper, @paperm, 'A3 paper')
+    ).
+process_argument(autoexpand, As, As) :-
+	!,
+	retractall(autoexpand(_)),
+	assert(autoexpand(monde)).
+process_argument(noautoexpand, As, As) :-
+	!,
+	retractall(autoexpand(_)).
+% normalize lambda terms of the form ((f y) x) to f(x,y) (yes/no) 
+process_argument(fxy, As, As) :-
+	!,
+	set_option_true(fxy).
+process_argument(nofxy, As, As) :-
+	!,
+	set_option_false(fxy).
+process_argument(fyx, As, As) :-
+	!,
+	set_option_false(fxy).
+% output all brackets in lambda terms (yes/no)
+process_argument(allbrackets, As, As) :-
+	!,
+	set_option_true(expl_brackets).
+process_argument(somebrackets, As, As) :-
+	!,
+	set_option_false(expl_brackets).
+process_argument(explicit_brackets, As, As) :-
+	!,
+	set_option_true(explicit_brackets).
+process_argument(implicit_brackets, As, As) :-
+	!,
+	set_option_false(explicit_brackets).
+process_argument(collapse_lambda, As, As) :-
+	!,
+	set_option_true(collapse_lambda).
+process_argument(explicit_lambda, As, As) :-
+	!,
+	set_option_false(collapse_lambda).
+% open statistics window (yes/no)
+process_argument(stats, As, As) :-
+	!,
+	set_option_true(stats).
+process_argument(nostats, As, As) :-
+	!,
+	set_option_false(stats).
+process_argument(statistics, As, As) :-
+	!,
+	set_option_true(stats).
+process_argument(nostatistics, As, As) :-
+	!,
+	set_option_true(stats).
+% load a grammar file
+process_argument(fragment, [File|As], As) :-
+	!,
+	load_fragment(File).
+process_argument(grammar, [File|As], As) :-
+	!,
+	load_fragment(File).
+process_argument(file, [File|As], As) :-
+	!,
+	load_fragment(File).
+process_argument(supertag, [File|As], As) :-
+	!,
+	load_fragment(File).
+% parse an example
+process_argument(example, [Int|As], As) :-
+	!,
+	example(Int).
+% probabilistically parse the input arguments (most probable parse first)
+process_argument(pprob, List, []) :-
+	!,
+	prob_parse(List),
+	cleanup.
+% probabilistically parse the input arguments (most probable parse first)
+process_argument(parse_pos_lemma, List, []) :-
+	!,
+	parse_pos_lemma(List),
+	cleanup.
+% probabilistically parse the input arguments (most probable parse first)
+process_argument(nocontinuity, As, As) :-
+	!,
+	retractall(continuous(_)),
+	retractall(continuous_dia(_)).
+process_argument(chart_pos_lemma, List, []) :-
+	!,
+	grail_chart(List),
+	cleanup.
+process_argument(chart_parse_all, [File|List], List) :-
+	!,
+	compile(File),
+	chart_parse_all.
+% prove a theorem (as either s or np)
+process_argument(prove, List, []) :-
+	!,
+	cmd_prove(List, [lit(s),lit(np),lit(txt)]),
+	cleanup.
+% prove a theorem with user-defined goal formula 
+process_argument(provegoal, [GoalAtom|List], []) :-
+	!,
+	atom_to_term(GoalAtom, Goal0, _),
+	macro_expand(Goal0, Goal),
+	cmd_prove(List, [Goal]),
+	cleanup.
+% prove a set of example sentences in a sequence of argument filenames
+process_argument(provefiles, FileNames, []) :-
+	!,
+	prove_files(FileNames),
+	cleanup.
+% set the link mode
+process_argument(link, [Mode|As], As) :-
+	!,
+    (
+	Mode = auto
+    ->
+	set_option(link_mode, auto, @linkm, auto)
+    ;
+	Mode = partial
+    ->
+	set_option(link_mode, partial, @linkm, partial)
+    ;
+	Mode = kbest
+    ->
+	set_option(link_mode, kbest, @linkm, kbest)
+    ;
+	Mode = xpce
+    ->
+	set_option(link_mode, xpce, @linkm, manual)
+    ;
+	Mode = manual
+    ->
+	set_option(link_mode, xpce, @linkm, manual)
+    ;
+	format(user_error, '{Error: unknown link mode "~w", defaulting to manual}~n', [Mode]),
+	set_option(link_mode, xpce, @linkm, manual)
+    ).
+
+% set the Kbest expression (useful only when link mode is set to kbest)
+process_argument(expr, [Expr|As], As) :-
+	!,
+	set_option(kbest_term, Expr).
+% set the par mode
+process_argument(par, [Mode|As], As) :-
+	!,
+    (
+	Mode = auto
+    ->
+	set_option(par_mode, auto, @parm, auto)
+    ;
+	Mode = xpce
+    ->
+	set_option(par_mode, xpce, @parm, manual)
+    ;
+	Mode = manual
+    ->
+	set_option(par_mode, xpce, @parm, manual)
+    ;
+	format(user_error, '{Error: unknown par mode "~w", defaulting to manual}~n', [Mode]),
+	set_option(par_mode, xpce, @parm, manual)
+    ).
+
+% If zeroheap is on, atomic connections with zero possibilities are
+% shown, if not, Grail will fail. Useful for debugging. 
+process_argument(zeroheap, As, As) :-
+	!,
+	set_option_true(zero_heap).
+process_argument(nozeroheap, As, As) :-
+	!,
+	set_option_false(zero_heap).
+% apply Regin's algorithm (yes/no)
+process_argument(regin, As, As) :-
+	!,
+	set_option_true(regin).
+process_argument(noregin, As, As) :-
+	!,
+	set_option_true(regin).
+% set a cutoff point for maximum cpu time
+process_argument(maxcpu, [CPU0|As], As) :-
+	!,
+	atom_number(CPU0, CPU),
+	retractall('$MAX_CPU'(_)),
+	assert('$MAX_CPU'(CPU)).
+% set a cutoff point for maximum number of inferences
+process_argument(maxinf, [INF0|As], As) :-
+	!,
+	atom_number(INF0, INF),
+	retractall('$MAX_INF'(_)),
+	assert('$MAX_INF'(INF)).
+% set a cutoff point for maximum number of structural rule generations
+process_argument(maxgen, [GEN0|As], As) :-
+	!,
+	atom_number(GEN0, GEN),
+	retractall('$MAX_GEN'(_)),
+	assert('$MAX_GEN'(GEN)).
+% Explicitly indicate all modes in the circle of the connections.
+% When set of @off (default) no modes will be displayed for grammars
+% with only a single mode.
+process_argument(explicit_modes, As, As) :-
+	!,
+	set_option_true(explicit_modes).
+process_argument(implicit_modes, As, As) :-
+	!,
+	set_option_false(explicit_modes).
+% A choice between 0 and 2 (for unary modes) and 3 (for binary modes)
+% as the tentacle label for the root of a connection.
+process_argument(zero_root, As, As) :-
+	!,
+	set_option_true(zero_root).
+process_argument(max_root, As, As) :-
+	!,
+	set_option_false(zero_root).
+% When set to @off all tentacle labels are suppressed, ie. it is no longer
+% possible to use the tentacle labels to distinguish between left and
+% right hypotheses and conclusion of a connection. It is recommended to
+% keep this set to @on unless you really know what you are doing.  
+process_argument(tentaclelabels, As, As) :-
+	!,
+	set_option_true(tentacle_labels).
+process_argument(notentaclelabels, As, As) :-
+	!,
+	set_option_false(tentacle_labels).
+process_argument(A, As, As) :-
+	format('Skipped unrecognized argument: ~w~n', [A]).
+
+prove_files([]).
+prove_files([F|Fs]) :-
+	prove_file(F),
+	prove_files(Fs).
+
+prove_file(F) :-
+	open(F, read, Stream),
+	file_lines(Stream),
+	close(Stream).
+
+file_lines(Stream) :-
+    (
+	at_end_of_stream(Stream)
+    ->
+	true
+    ;
+	read_line(String, Stream),
+	tokenize_string(String, List),
+	handle_stream_list(List),
+	file_lines(Stream)
+    ).
+
+handle_stream_list(InList) :-
+    (
+	append(_, [provegoal,Goal|List], InList)
+    ->
+	Goals = [Goal]
+    ;
+	append(_, [prove|List], InList)
+    ->
+	Goals = [lit(s),lit(np)]
+    ;
+	InList = [Goal|List],
+	Goals = [Goal]
+    ),
+	cmd_prove(List, Goals).
+
+% cmd_prove(+ListOfWordFormulas, +ListOfGoals)
+%
+% this predicate is used for command line invocation of Grail
+% the first list contains words at odd positions and formulas
+% at even positions, the second list contains goal formulas.
+% in the case of multiple lexical possibilities for a word,
+% the different formulas are separated by the infix operator ^.
+
+cmd_prove(List, Goals) :-
+	/* separate words and formulas */
+	split_odds_evens(List, Words, Forms0),
+        time(catch(cmd_prove(Words, Forms0, Goals), Exception,
+		   (print_message(error, Exception),
+	           format('=== PARSE ABORTED! ===~n', [Exception])))),
+	activate_items.
+
+cmd_prove(Words, Forms, Goals) :-	
+	open_semantics_files,
+	get_option(paper_size, PaperSize),
+	latex_header(sem, PaperSize),
+	/* create string containing all the words */
+	concat_atom(Words, ' ', Atom),
+	name(Atom, String0),
+	backslash_quotes(String0, String),
+	/* try to prove the sequents */
+	reset_global_counters,
+	update_mode_info(Forms),
+	member(Goal0, Goals),
+	cmd_lookup(Words, Forms, SemForms, Goal0, Goal),
+	latex_print_sentence(String, '\\vdash', Goal, sem),
+	format('~w~n', [SemForms]),
+	prove(SemForms, Goal, Words, String, 0),
+	fail.
+
+cmd_prove(_, _, _) :-
+	format(log, '=== END OF PARSE ===~n', []),
+	format('=== END OF PARSE ===~2n', []),
+	'$SOLUTION'(N),
+	finished_message(N, Msg),
+	format('~w~n', [Msg]),
+	latex_tail(sem),
+	close(sem),
+	pdflatex_semantics.
+
+update_sem_pdf :-
+	get_option(paper_size, Size),
+    (
+        exists_file('semantics.tex')
+    ->
+	format(atom(Cmd), '@SED@ -e s,a.paper,~w, semantics.tex > semantics.tex.bak ; cp semantics.tex.bak semantics.tex', [Size])
+    ;
+        true
+    ),
+	shell_warn(Cmd),
+	pdflatex_semantics.
+
+pdflatex_semantics :-
+    (
+	option_true(latex)
+    ->
+	shell_warn('@PDFLATEX@ semantics.tex >> texlog &')
+    ;
+	true
+    ).
+
+open_semantics_files :-
+	new_output_file('semantics.tex', sem),
+	new_output_file('previous_semantics.pl', previous_sem),
+	open('semantics.pl', append, _, [alias(sem_pl),
+					 buffer(line)]).
+
+% ===================================================================
+% =                      Postscript Window                          =
+% ===================================================================
+
+producing_postscript :-
+	'@GV@' \== 'NULL'.
+
+new_postscript_window(0, _).
+new_postscript_window(1, File) :-
+	new_postscript_window(File).
+
+new_postscript_window(File) :-
+	set_option_true(gv),
+	fork(PId),
+    (
+	PId == child
+    ->
+	concat_atom(['@GV@ -watch ', File, '.ps'], Cmd),
+	shell_warn(Cmd)
+    ;
+	assert('$PS'(PId))
+    ).
+
+kill_postscript_windows :-
+	'$PS'(PS),
+	catch(kill(PS,9), _, true),
+	fail.
+kill_postscript_windows.
+
+refresh_ps_file :-
+	get_option(gv, GV),
+	refresh_ps_file(GV).
+
+refresh_ps_file(0).
+refresh_ps_file(1) :-
+	delete_file_if_exists('tmp.ps').
+
+default_image :-
+	shell_warn('cp @graildatadir@/grail3.ps tmp.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot tmp.dot'),
+	shell_warn('cp @graildatadir@/grail3.ps structural_rules.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot structural_rules.dot'),
+	shell_warn('cp @graildatadir@/grail3.ps lookup.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot lookup.dot').
+
+% ===================================================================
+% =                      LaTeX and Pdf Windows                      =
+% ===================================================================
+
+open_semantics_window :-
+    (
+	producing_pdf
+    ->
+        shell_warn('@PDF@ semantics.pdf >> texlog &')
+    ;
+	true
+    ).
+
+producing_pdf :-
+	'@PDFLATEX@' \== 'NULL',
+	'@PDF@' \== 'NULL'.
+
+
+% ==========================
+% = Structural Rule Window =
+% ==========================
+
+open_latex_structural_rules_window :-
+    (
+	producing_pdf
+    ->
+	latex_structural_rules_wait,
+        shell_warn('@PDF@ postulates.pdf >> texlog &')
+    ;
+	true
+    ).
+
+latex_structural_rules :-
+	new_output_file('postulates.tex', post),
+	latex_header_t('r@{$\\ \\vdash\\ $}ll', post),
+        latex_structural_rules(post),
+	latex_tail_t(post),
+        close(post),
+        shell_warn('@PDFLATEX@ postulates.tex >> texlog &').
+
+latex_structural_rules_wait :-
+	new_output_file('postulates.tex', post),
+	latex_header_t('r@{$\\ \\vdash\\ $}ll', post),
+        latex_structural_rules(post),
+	latex_tail_t(post),
+        close(post),
+        shell_warn('@PDFLATEX@ postulates.tex >> texlog').
+
+latex_structural_rules(Stream) :- 
+        findall(conversion(X,Y,V,Z),conversion(X,Y,V,Z), L0),
+    (
+	L0 == []
+    ->
+	true
+    ;
+	convert_structural_rules(L0, L),
+	latex_structural_rules(L, Stream)
+    ).
+
+convert_structural_rules([], []).
+convert_structural_rules([A|As], [B|Bs]) :-
+	convert_structural_rule(A, B),
+	convert_structural_rules(As, Bs).
+
+convert_structural_rule(conversion(X,Y0,V,Z), conversion(A,B,Z)) :-
+	numbervars(t(X,Y0,V), 0, _),
+	construct_tree(X, A0),
+	reverse(Y0, Y),
+	construct_tree(Y, B0),
+	renumber_vars(A0, A, 0, N, empty, T),
+	renumber_vars(B0, B, N, _, T, _).
+
+% output the structural rules to a separate dot file
+
+dot_structural_rules :-
+        findall(conversion(X,Y,V,Z),conversion(X,Y,V,Z), L0),
+    (
+	L0 == []
+    ->
+	true
+    ;
+	convert_structural_rules(L0, L),
+	dot_structural_rules(L),
+	layout_structural_rules
+    ).
+
+
+renumber_vars('$VAR'(P), '$VAR'(Q), N0, N, T0, T) :-
+    (
+	btree_get(T0, P, Q)
+    ->
+	N = N0,
+	T = T0
+    ;
+	Q = N0,
+	N is N0 + 1,
+	btree_insert(T0, P, N0, T)
+    ).
+renumber_vars(dia(I,A0), dia(I,A), N0, N, T0, T) :-
+	renumber_vars(A0, A, N0, N, T0, T).
+renumber_vars(p(I,A0,B0), p(I,A,B), N0, N, T0, T) :-
+	renumber_vars(A0, A, N0, N1, T0, T1),
+	renumber_vars(B0, B, N1, N, T1, T).
+
+% =
+
+construct_tree([_Root-T|Ts], Tree) :-
+	construct_tree(T, Ts, [], Tree).
+
+
+construct_tree(dia(I,B), Bs0, Bs, dia(I,T)) :-
+    (
+	select(B-Branch, Bs0, Bs1)
+    ->
+	construct_tree(Branch, Bs1, Bs, T)
+    ;
+	Bs = Bs0,
+        T = B
+    ).
+construct_tree(p(I,B,C), Bs0, Bs, p(I,TL,TR)) :-
+    (
+	select(B-BranchL, Bs0, Bs1)
+    ->
+	construct_tree(BranchL, Bs1, Bs2, TL)
+    ;
+	Bs2 = Bs0,
+        TL = B
+    ),
+    (
+	select(C-BranchR, Bs2, Bs3)
+    ->
+	construct_tree(BranchR, Bs3, Bs, TR)
+    ;
+	Bs = Bs2,
+	TR = C
+    ).
+
+% ==================
+% = Lexicon Window =
+% ==================
+
+open_latex_lexicon_window :-
+    (
+	producing_pdf
+    ->
+	latex_lexicon_wait,
+        shell_warn('@PDF@ lexicon.pdf >> texlog &')
+    ;
+	true
+    ).
+
+latex_lexicon :-
+        new_output_file('lexicon.tex', lex),
+	latex_header(lex),
+	latex_lexicon(lex),
+	latex_tail(lex),
+        close(lex),
+        shell_warn('@PDFLATEX@ lexicon.tex >> texlog &').
+
+
+latex_lexicon_wait :-
+        new_output_file('lexicon.tex', lex),
+	latex_header(lex),
+	latex_lexicon(lex),
+	latex_tail(lex),
+        close(lex),
+        shell_warn('@PDFLATEX@ lexicon.tex >> texlog').
+
+% =
+
+latex_lexicon(Stream) :-
+    (
+	option_true(lex_by_type)
+    ->
+	findall(B-lex(A,B,C),is_in_lexicon(A,B,C),L0)
+    ;
+        findall(A-lex(A,B,C),is_in_lexicon(A,B,C),L0)
+    ),
+    (
+	L == []
+    ->
+	true
+    ;
+	keysort(L0, L1),
+	strip_keys(L1, L),
+	latex_lexicon(L, Stream)
+    ).
+
+is_in_lexicon(A, B, C) :-
+	lex(A, B, C),
+        numbervars_formula(B),
+	numbervars(A-C, 0, _).
+is_in_lexicon(A, B, C) :-
+	default_semantics(A, B, C),
+        numbervars_formula(B),
+	instantiate_word(A),
+	numbervars(C, 0, _).
+is_in_lexicon(A, B, C) :-
+	default_semantics(A, _, B, C),
+        instantiate_word(A),
+        numbervars_formula(B),
+	numbervars(C, 0, _).
+
+numbervars_formula(F0) :-
+	macro_expand(F0, F),
+	numbervars_formula(F, 0, _).
+
+numbervars_formula(lit(A), N0, N) :-
+	numbervars(A, N0, N).
+numbervars_formula(dia(I,A), N0, N) :-
+	instantiate_mode(I),
+	numbervars_formula(A, N0, N).
+numbervars_formula(box(I,A), N0, N) :-
+	instantiate_mode(I),
+	numbervars_formula(A, N0, N).
+numbervars_formula(dr(I,A,B), N0, N) :-
+	instantiate_mode(I),
+	numbervars_formula(A, N0, N1),
+	numbervars_formula(B, N1, N).
+numbervars_formula(dl(I,A,B), N0, N) :-
+	instantiate_mode(I),
+	numbervars_formula(A, N0, N1),
+	numbervars_formula(B, N1, N).
+numbervars_formula(p(I,A,B), N0, N) :-
+	instantiate_mode(I),
+	numbervars_formula(A, N0, N1),
+	numbervars_formula(B, N1, N).
+
+instantiate_mode(0) :-
+	!.
+instantiate_mode(_).
+
+
+instantiate_word('\\textit{word}') :-
+	!.
+instantiate_word(_).
+
+% ============================
+% = Example Sentences Window =
+% ============================
+
+open_latex_grammar_window :-
+    (
+	producing_pdf
+    ->
+	latex_grammar_wait,
+        shell_warn('@PDF@ grammar.pdf >> texlog &')
+    ;
+	true
+    ).
+
+latex_grammar :-
+	new_output_file('grammar.tex', gra),
+	latex_header(gra, a4paper),
+	latex_section('Example Sentences', gra),
+	latex_header_tab(l, gra),
+	latex_sentences(gra),
+	latex_tail_tab(gra),
+	latex_section('Lexicon', gra),
+	latex_lexicon(gra),
+	latex_section('Structural Rules', gra),
+	latex_header_tab('r@{$\\ \\vdash \\ $}ll', gra),
+        latex_structural_rules(gra),
+	latex_tail_t(gra),
+	close(gra),
+        shell_warn('@PDFLATEX@ grammar.tex >> texlog &').
+
+latex_grammar_wait :-
+	new_output_file('grammar.tex', gra),
+	latex_header(gra, a4paper),
+	latex_section('Example Sentences', gra),
+	latex_header_tab(l, gra),
+	latex_sentences(gra),
+	latex_tail_tab(gra),
+	latex_section('Lexicon', gra),
+	latex_lexicon(gra),
+	latex_section('Structural Rules', gra),
+	latex_header_tab('r@{$\\ \\vdash \\ $}ll', gra),
+        latex_structural_rules(gra),
+	latex_tail_t(gra),
+	close(gra),
+        shell_warn('@PDFLATEX@ grammar.tex >> texlog').
+
+open_latex_sentences_window :-
+    (
+	producing_pdf
+    ->
+	latex_sentences_wait,
+        shell_warn('@PDF@ sentences.pdf >> texlog &')
+    ;
+	true
+    ).
+
+
+latex_sentences_wait :-
+	new_output_file('sentences.tex', exa),
+	latex_header_t(l, exa),
+	latex_sentences(exa),
+	latex_tail_t(exa),
+        close(exa),
+        shell_warn('@PDFLATEX@ sentences.tex >> texlog').
+
+latex_sentences :-
+	new_output_file('sentences.tex', exa),
+	latex_header_t(l, exa),
+	latex_sentences(exa),
+	latex_tail_t(exa),
+        close(exa),
+        shell_warn('@PDFLATEX@ sentences.tex >> texlog &').
+
+latex_sentences(Stream) :-
+        findall(example(Cat,String,G),(example_phrase(_N,Cat,String,_Ant,G0),
+                              macro_expand(G0,G)),L),
+    (
+	L == []
+    ->
+	true
+    ;
+        latex_sentences(L, Stream)
+    ).
+
+
+% ===================================================================
+% =                          Help Window                            =
+% ===================================================================
+
+% help function are only operational if xpce_html is true.
+
+create_help_window(H) :-
+	xpce_html,
+	!,
+	new(H, doc_window('file://@graildatadir@/help.html')).
+create_help_window(_).
+	
+open_help_window :-
+	xpce_html,
+	!,
+	send(@help, open),
+	send(@help, expose).
+open_help_window.
+
+about_grail :-
+	xpce_html,
+	!,
+	open_help_window,
+	send(@help, url('file://@graildatadir@/help.html')),
+	send(@help, goto_label, top).
+about_grail.
+	
+about_tlg :-
+	xpce_html,
+	!,
+	open_help_window,
+	send(@help, url('file://@graildatadir@/help.html')),
+	send(@help, goto_label, tlg).
+about_tlg.
+
+about_design :-
+	xpce_html,
+	!,
+	open_help_window,
+	send(@help, url('file://@graildatadir@/help.html')),
+	send(@help, goto_label, design).
+about_design.
+
+about_parsing :-
+	xpce_html,
+	!,
+	open_help_window,
+	send(@help, url('file://@graildatadir@/help.html')),
+	send(@help, goto_label, parsing).
+about_parsing.
+
+about_grammar :-
+	xpce_html,
+	!,
+	open_help_window,
+    (
+	grammar_help(URL)
+    ->
+	send(@help,url(URL))
+    ;
+	true
+    ).
+about_grammar.
+
+% ===================================================================
+% =                    Loading/Saving Grammars                      =
+% ===================================================================
+
+load_fragment :-
+	change_to_grammar_directory(OldDir),
+	get(@finder, file, @on, pl, FileName),
+	working_directory(_, OldDir),
+	load_fragment(FileName).
+
+reload_fragment :-
+	current_fragment(FileName),
+	load_fragment(FileName).
+
+add_help_info(FileName) :-
+	xpce_html,
+	!,
+	get(@help, attribute, gram_help, GRAMHELP),
+	file_name_extension(Base, _, FileName),
+	file_name_extension(Base, html, HelpFile),
+	concat_atom(['file://', HelpFile], URL),
+    (
+	exists_file(HelpFile),
+	access_file(HelpFile, read)
+    ->
+	retractall(grammar_help(_)),
+	assert(grammar_help(URL)),
+	send(GRAMHELP, active, @on)
+    ;
+	send(GRAMHELP, active, @off)
+    ).
+add_help_info(_).
+
+load_fragment(FileName) :-
+	format(log, '= Loading grammar: ~w...~n', [FileName]),
+	retractall(conversion(_,_,_,_)),
+	retractall(lex(_,_,_)),
+	retractall(example(_,_)),
+	retractall(example_phrase(_,_,_)),
+	retractall(example_phrase(_,_,_,_)),
+	retractall(example_phrase(_,_,_,_,_)),
+	retractall(special_string(_,_)),
+	retractall(sentence_category(_,_)),
+	retractall(atomic_type(_,_)),
+	retractall(boolean_type(_)),
+	retractall(state_type(_)),
+	retractall(entity_type(_)),
+	retractall(macro(_,_)),
+	retractall(continuous(_)),
+	retractall(continuous_dia(_)),
+	retractall(inert(_)),
+	retractall(inert_dia(_)),
+	retractall(external(_)),
+	retractall(external_dia(_)),
+	retractall(custom_first_order(_,_,_,_)),
+	retractall(root_form(_,_)),
+	retractall(default_semantics(_,_,_)),
+	retractall(default_semantics(_,_,_,_)),
+	retractall(sequence_semantics(_,_,_,_,_,_)),
+	retractall(solution_semantics_hook(_,_)),
+	retractall(auto_expand(_)),
+%	retractall(manual_expand(_)),
+	retractall(translate_form(_,_)),
+	retractall(translate_sem(_,_)),
+	retractall(invisible_mode(_)),
+	consult(FileName),
+	default_image,
+	file_base_name(FileName, Base),
+	send(@g, label(Base,'Grail 3')),
+	update_valuesets,
+	update_examples,
+	update_lex_window,
+	add_help_info(FileName),
+	retractall(current_fragment(_)),
+	assert(current_fragment(FileName)),
+	format(log, '= Loading done, preforming type checks~n', []),
+	check_lexicon_typing,
+	format(log, '= Type checks done!~n', []),
+	set_query_status,
+	dot_structural_rules.
+
+set_query_status :-
+    (
+	sentence_category(_,_)
+    ->
+	set_option_true(query)
+    ;
+	set_option_false(query)
+    ).
+
+save_fragment :-
+	get(@finder, file, @off, pl, FileName),
+	file_base_name(FileName, Base),
+	telling(Out),
+	tell(FileName),
+	format('% -*- Mode: Prolog -*-~n% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', [Base]),
+	format('% !grail @GRAIL_VERSION@~2n', []),
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Structural Rules']),
+	list_if_exists(conversion,4),
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Macros']),
+	list_if_exists(macro,2),
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Optimization Parameters']),
+	format('% = External modes~2n', []),
+	list_if_exists(external,1),
+	list_if_exists(external_dia,1),
+	format('% = Inert modes~2n', []),
+        list_if_exists(inert,1),
+	list_if_exists(inert_dia,1),
+	format('% = Continous modes~2n', []),
+	list_if_exists(continuous,1),
+	list_if_exists(continuous_dia,1),
+	format('% = Custom first-order translations~2n', []),
+	list_if_exists(custom_first_order,4),
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Lexicon']),
+	list_if_exists(lex,3),
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Semantics']),
+	format('% = Types for atomic formulas~2n', []),
+	list_if_exists(atomic_type,2),
+	format('% = Sentence categories~2n', []),
+	list_if_exists(sentence_category,2),
+	format('% = Boolean types~2n', []),
+	list_if_exists(boolean_type,1),
+	format('% = State types~2n', []),
+	list_if_exists(state_type,1),
+	format('% = Entity types~2n', []),
+	list_if_exists(entity_type,1),
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Tokenization']),
+	list_special_strings,
+	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Example Sentences']),
+	list_example_phrases,
+	nl,
+	told,
+	tell(Out).
+
+change_to_grammar_directory(OldDir) :-
+    (
+        current_fragment(FileName)
+    ->
+        file_directory_name(FileName, NewDir),
+        working_directory(OldDir, NewDir)
+    ;
+        working_directory(OldDir, OldDir)
+    ).
+     
+list_if_exists(F, A) :-
+	functor(P, F, A),
+    (
+	current_predicate(_, P)
+     ->
+	listing(F/A)
+    ;
+	true
+    ).
+
+list_example_phrases :-
+    (
+	current_predicate(_, example_phrase(_,_,_,_,_))
+    ->
+	findall(ex(A,B,C,D,E), example_phrase(A,B,C,D,E), List),
+	nl,
+	list_example_phrases(List)
+    ;
+	true
+    ).
+
+list_example_phrases([]) :-
+	nl.
+list_example_phrases([ex(A,B,C,D,E)|Rest]) :-
+    (
+	B = prove
+    ->
+	format('example_phrase(~w, ~w, "~s", ~w, ~w).~n', [A,B,C,D,E])
+    ;	
+	format('example_phrase(~w, ~w, "~s", "~s", ~w).~n', [A,B,C,D,E])
+    ),
+	list_example_phrases(Rest).
+
+list_special_strings :-
+    (
+	current_predicate(_, special_string(_,_))
+    ->
+	findall(A-B, special_string(A,B), List),
+	nl,
+	list_special_strings(List)
+    ;
+	true
+    ).
+
+list_special_strings([]) :-
+	nl.
+list_special_strings([A-B|Rest]) :-
+	format('special_string("~s", ~w).~n', [A,B]),
+	list_special_strings(Rest).
+
+update_valuesets :-
+	get(@g, attribute, goal_formula, FORM),
+	send(FORM, clear),
+	get(@lex, attribute, lex_formula, LFORM),
+	send(LFORM, clear),
+	get(@lex, attribute, form_index, INDEX),
+	send(INDEX, clear),
+	/* find all atomic formulas and macros */
+	findall(A, (macro(A,_B), functor(A, A, 0)), List0),
+	findall(D, atomic_formula(D), List1),
+	sort(List0, Set0),
+	sort(List1, Set1),
+	ord_union(Set0, Set1, Set2),
+    (
+	Set2 = []
+    ->
+	VSet = @nil
+    ;
+	VSet = Set2
+    ),
+	send(FORM, value_set, VSet),
+	send(LFORM, value_set, VSet),
+	format(log, 'Atomic Formulas: ~w~n', [Set1]),
+	format(log, 'Atomic Macros  : ~w~n', [Set0]),
+	findall(I, formula_mode(I), Modes0),
+	sort(Modes0, Modes),
+	format(log, 'Modes          : ~w~n', [Modes]), 
+    (
+	Modes = []
+    ->
+	MSet = @nil,
+        Index = 0
+    ;
+	MSet = Modes,
+	Modes = [Index|_],
+        send(INDEX, selection, Index)
+    ),
+	/* if there are two or more modes, display them in the graphs */
+    (
+	Modes = [_,_|_]
+    ->
+	set_option_false(uni_modal)
+    ;
+	set_option_true(uni_modal)
+    ),
+	send(INDEX, value_set, MSet).
+
+atomic_formula(D) :-
+	lex(_, D0, _),
+	macro_expand(D0, D1),
+	atomic_formula1(D1, D).
+
+atomic_formula1(lit(A), D) :-
+    (
+        compound(A)
+    ->
+        functor(A, D, _)
+    ;
+        D = A
+    ).
+atomic_formula1(dl(_,A,B), D) :-
+    (
+	atomic_formula1(A, D)
+    ;
+	atomic_formula1(B, D)
+    ).
+atomic_formula1(dr(_,A,B), D) :-
+    (
+	atomic_formula1(A, D)
+    ;
+	atomic_formula1(B, D)
+    ).
+atomic_formula1(p(_,A,B), D) :-
+    (
+	atomic_formula1(A, D)
+    ;
+	atomic_formula1(B, D)
+    ).
+atomic_formula1(dia(_,A), D) :-
+	atomic_formula1(A, D).
+atomic_formula1(box(_,A), D) :-
+	atomic_formula1(A, D).
+
+
+formula_mode(D) :-
+	lex(_, D0, _),
+	macro_expand(D0, D1),
+	formula_mode1(D1, D).
+
+formula_mode1(dl(I,A,B), D) :-
+    (
+	D = I
+    ;
+	formula_mode1(A, D)
+    ;
+	formula_mode1(B, D)
+    ).
+formula_mode1(dr(I,A,B), D) :-
+    (
+	D = I
+    ;
+	formula_mode1(A, D)
+    ;
+	formula_mode1(B, D)
+    ).
+formula_mode1(p(I,A,B), D) :-
+    (
+	D = I
+    ;
+	formula_mode1(A, D)
+    ;
+	formula_mode1(B, D)
+    ).
+formula_mode1(dia(I,A), D) :-
+    (
+	D = I
+    ;
+	formula_mode1(A, D)
+    ).
+formula_mode1(box(I,A), D) :-
+    (
+	D = I
+    ;
+	formula_mode1(A, D)
+    ).
+
+update_mode_info(Formulas) :-
+	collect_modes_list(Formulas, [], Modes),
+	/* if there are two or more modes, display them in the graphs */
+    (
+	Modes = [_,_|_]
+    ->
+	set_option_false(uni_modal)
+    ;
+	set_option_true(uni_modal)
+    ).
+
+collect_modes_list([], M, M).
+collect_modes_list([F|Fs], Ms0, Ms) :-
+	collect_modes(F, Ms0, Ms1),
+	collect_modes_list(Fs, Ms1, Ms).
+
+collect_modes(lit(_), M, M).
+collect_modes(dia(I,A), M0, M) :-
+	ord_insert(M0, I, M1),
+	collect_modes(A, M1, M).
+collect_modes(box(I,A), M0, M) :-
+	ord_insert(M0, I, M1),
+	collect_modes(A, M1, M).
+collect_modes(dr(I,A,B), M0, M) :-
+	ord_insert(M0, I, M1),
+	collect_modes(A, M1, M2),
+	collect_modes(B, M2, M).
+collect_modes(dl(I,A,B), M0, M) :-
+	ord_insert(M0, I, M1),
+	collect_modes(A, M1, M2),
+	collect_modes(B, M2, M).
+collect_modes(p(I,A,B), M0, M) :-
+	ord_insert(M0, I, M1),
+	collect_modes(A, M1, M2),
+	collect_modes(B, M2, M).
+
+
+% ===================================================================
+% =                       Example Phrases                           =
+% ===================================================================
+
+update_examples :-
+	get(@g, attribute, example_browser, EB),
+	get(EB, dict, Dict),
+	send(EB, clear),
+	send(Dict, clear),
+	examples(EB).
+
+examples :-
+	get(@g, attribute, example_browser, EB),
+	examples(EB).
+
+examples(EB) :-
+	findall(X, is_example(X), List0),
+	retractall(example(_,_)),
+	retractall(example_phrase(_,_,_)),
+	retractall(example_phrase(_,_,_,_)),
+	retractall(example_phrase(_,_,_,_,_)),
+	assert_example_phrases(List0, 1, EB).
+
+is_example(example(S,F)) :-
+	example(S, F).
+is_example(example(S,F)) :-
+	example_phrase(_, S,F).
+is_example(example_phrase(A,B,C,D)) :-
+	example_phrase(A, B, C, D).
+is_example(example_phrase(A,B,C,D)) :-
+	example_phrase(_, A, B, C, D).
+
+assert_example_phrases([], N, _) :-
+	retractall('$EXNO'(_)),
+	assert('$EXNO'(N)).
+assert_example_phrases([E|Es], N0, EB) :-
+	assert_example_phrase(E, N0, EB),
+	N is N0 + 1,
+	assert_example_phrases(Es, N, EB).
+
+assert_example_phrase(example(S,F0), N, EB) :-
+	macro_expand(F0, F),
+	example_category(S, Cat),
+	assert(example_phrase(N, Cat, S, S, F)),
+	name(SA, S),
+	new(D, dict_item(N, SA, @default, @default)),
+	send(EB, append, D).
+
+assert_example_phrase(example_phrase(P,S,A,F0), N, EB) :-
+	macro_expand(F0, F),
+	assert(example_phrase(N, P, S, A, F)),
+	name(SA, S),
+	new(D, dict_item(N, SA, @default, @default)),
+	send(EB, append, D).
+
+example_category([A|As], Cat) :-
+    (
+	A = 45
+    ->
+	Cat = comment
+    ;
+	A = 32
+    ->
+	example_category(As, Cat)
+    ;
+	Cat = parse
+    ).
+
+get_normalized_goal_formula(FORM, Form) :-
+	get(FORM, selection, Form0),
+    (
+	Form0 == ''
+    ->
+	Form1 = s,
+	send(FORM, selection, Form1)
+    ;
+	Form1 = Form0
+    ),
+	macro_expand(Form1, Form).
+
+run_example :-
+	get(@g, attribute, input_sentence, TEXT),
+	get(TEXT, selection, Atom),
+	name(Atom, String0),
+	backslash_quotes(String0, String),
+	get(@g, attribute, goal_formula, FORM),
+	get_normalized_goal_formula(FORM, Form),
+    (
+	example_phrase(N0, Pred, String, Ant, Form)
+    ->
+	example(Pred, String, Ant, Form)
+    ;
+	Ant = String,
+	'$EXNO'(N0),
+	assert(example_phrase(N0, parse, String, Ant, Form)),
+	new(D, dict_item(N0, Atom, @default, @default)),
+	get(@g, attribute, example_browser, EB),
+	send(EB, append, D),
+	retractall('$EXNO'(_)),
+	N is N0 + 1,
+	assert('$EXNO'(N)),
+	example(String, Form)
+    ).
+
+deactivate_items :-
+	get(@g, attribute, control_buttons, BUTTONS),
+	get(BUTTONS, attribute, parse_button, PARSE),
+	get(BUTTONS, attribute, lex_button, LEX),
+	get(BUTTONS, attribute, load_button, LOAD),
+	get(BUTTONS, attribute, quit_button, QUIT),
+%	send(BUTTONS, focus, QUIT),
+	deactivate(PARSE),
+	deactivate(LEX),
+	deactivate(LOAD),
+	send(QUIT, show_focus_border, @on),
+	send(BUTTONS, default_button, QUIT),
+	get(@g, attribute, load_menu_item, LMI),
+	send(LMI, active, @off).
+
+deactivate(ITEM) :-
+	send(ITEM, active, @off),
+	send(ITEM, show_focus_border, @off),
+	send(ITEM, status, inactive).
+
+
+ai :-
+	activate_items.
+ 
+activate_items :-
+	get(@g, attribute, control_buttons, BUTTONS),
+	get(BUTTONS, attribute, parse_button, PARSE),
+	get(BUTTONS, attribute, lex_button, LEX),
+	get(BUTTONS, attribute, load_button, LOAD),
+	send(BUTTONS, default_button, PARSE),
+%	send(BUTTONS, focus, PARSE),
+	activate(PARSE),
+	activate(LEX),
+	activate(LOAD),
+	get(@g, attribute, load_menu_item, LMI),
+	send(LMI, active, @on).
+
+activate(ITEM) :-
+	send(ITEM, active, @on),
+	send(ITEM, show_focus_border, @on).
+
+solution_dialog(Text) :-
+	copy_global_ordkeyset('$AXIOM_LIST', '$AXIOM_SOL'),
+	current_link_mode(LinkMode),
+	set_option(link_mode, LinkMode),
+	get_option(link_mode, LINKM),
+    (
+	/* in case we are running on automatic, just print the */
+        /* message */
+	get_option(par_mode, auto),
+	member(LINKM, [auto, kbest]),
+	LINKM == LinkMode
+    ->
+	print(Text),
+	nl
+    ;
+	new(D, dialog(Text)),
+	send(D, append, new(_, text(Text,@default,@default))),
+	send(D, append, button(continue, message(D, return, continue))),
+	send(D, append, button('Next Lookup', message(D, return, next))),
+	send(D, append, button(abort, message(D, return, abort))),
+	send(D, default_button, continue),
+	get(D, confirm, Answer),
+	send(D, free),
+        (
+	    Answer = continue
+	->
+	    true
+	;
+	    Answer = next
+	->
+	    throw(next)
+	;
+	    throw(aborted)
+	)
+    ).
+
+finished_dialog :-
+	current_link_mode(LinkMode),
+	set_option(link_mode, LinkMode),
+	'$SOLUTION'(N),
+	finished_message(N, Msg),
+    (
+	get_option(par_mode, auto),
+	get_option(link_mode, auto)
+    ->
+	print(Msg)
+    ;
+	new(D, dialog('Parse Completed!')),
+	send(D, append, new(_, text(Msg,@default,@default))),
+	send(D, append, button(ok, message(D, return, ok))),
+	send(D, default_button, ok),
+	get(D, confirm, _),
+	send(D, free)
+    ),
+	activate_items.
+
+finished_message(N, Msg) :-
+    (
+	N = 0
+    ->
+	Msg = 'No solutions found.'
+    ;
+	N = 1
+    ->
+	Msg = '1 solution found.'
+    ;
+	concat_atom([N, ' solutions found.'], Msg)
+    ).
+
+% ===================================================================
+% =                          Graph Display                          =
+% ===================================================================
+
+layout :-
+     (
+	'$DOTFILE'(Num)
+     ->
+	Num0 is Num - 1,
+	layout(Num0)
+     ;
+       true
+     ).
+
+layout(Num) :-
+	'$DOTPREFIX'(Prefix),
+	get_option(graph_layout_command, GLC),
+	/* don't update the postscript files unless someone */
+        /* is actually watching them */
+    (
+	option_true(gv)
+    ->
+	concat_atom(['@GRAPHVIZ@/', GLC, Prefix, Num, '.dot > ', Prefix, Num, '.ps'], Command1),
+	format(log, '~w~n', [Command1]),
+	shell_warn(Command1),
+	append_postscript_file(Prefix, Num)
+    ;
+	true
+    ),
+	concat_atom(['@MV@ ', Prefix, Num, '.dot tmp.dot'], Command2),
+	format(log, '~w~n', [Command2]),
+	shell_warn(Command2).
+
+layout_lookup :-
+    (
+	option_true(gv)
+    ->
+	get_option(graph_layout_command, GLC),
+	concat_atom(['@GRAPHVIZ@/', GLC, lookup, '.dot > ', lookup, '.ps'], Command),
+	shell_warn(Command)
+    ;
+	true
+    ).
+
+layout_structural_rules :-
+    (
+	option_true(gv)
+    ->
+	get_option(graph_layout_command, GLC),
+	concat_atom(['@GRAPHVIZ@/', GLC, structural_rules, '.dot > ', structural_rules, '.ps'], Command),
+	shell_warn(Command)
+    ;
+	true
+    ).
+
+update_dotfile(Num0) :-
+	user:'$DOTFILE'(Num0),
+	retractall(user:'$DOTFILE'(_)),
+	Num is Num0+1,
+	assert(user:'$DOTFILE'(Num)).
+
+append_postscript_file(Prefix, Num) :-
+    (
+	'@TCLSH@' \== 'NULL'
+    ->
+	/* if tclsh is installed, use it to insert the new postscript */
+        /* file into the old one. */
+        concat_atom(['@grailbindir@/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
+		     '@MV@ tmp2.ps tmp.ps'], CommandTclsh),
+	shell_warn(CommandTclsh)
+    ;
+	true
+    ).
+
+% ===================================================================
+% =             Interface Predicates to the Theorem Prover          =
+% ===================================================================
+
+% = example(+Num)
+%
+% executes example Num from the current fragment.
+
+example(X) :-
+	example_phrase(X, P, String, A, G),
+	example(P, String, A, G).
+
+example(comment, _, _, _).
+example(parse, _, A, G) :-
+	test(A, G).
+example(prove, _, A, G) :-
+	prove(A, G).
+example(pos_lemma, String, A, Goal0) :-
+	reset_global_counters,
+	open_semantics_files,
+	get_option(paper_size, PaperSize),
+	latex_header(sem, PaperSize),
+	deactivate_items,
+	split_a_b_c_ds(A, Words, POSs, Lemmas, Formulas),
+	cmd_lookup_sem(Words, POSs, Lemmas, Formulas, SemForms, Goal0, Goal),
+   (
+	catch(prove(SemForms, Goal, Words, String, 0), W, format('~w~n',[W])),
+        fail
+   ;
+	activate_items,
+	latex_tail(sem),
+	close(sem),
+	pdflatex_semantics,
+	finished_dialog,
+	erase_dot_files
+   ).
+
+% = show_dictitem(+DictItem)
+%
+% Portray the currently selected phrase in the keyboard input
+% fields. Because only atoms are accepted, care has to be taken
+% to transform to transform a compound term into an atom, eg.
+% dl(i,a,b) is transformed into dl_i_a_b and an appropriate
+% macro declaration is asserted.
+% NB. Grail does not allow multiple expansions of the same item
+%     and this can lead to problems if you employ macro
+%     definitions of this form yourself!
+
+show_dictitem(DictItem) :-
+	get(DictItem, key, Key),
+	example_phrase(Key, Cat, NS, _, M0),
+    (
+	Cat = comment
+    ->
+	N = '',
+	M = ''
+    ;
+ 	flatten_term(M0, M),
+	assert_macro_if_new(M, M0),
+ 	name(N, NS)
+    ),
+	get(@g, attribute, input_sentence, TEXT),
+	send(TEXT, selection, N),
+	get(@g, attribute, goal_formula, FORM),
+	send(FORM, selection, M).
+
+flatten_term(M, T) :-
+    (
+	atomic(M)
+    ->
+	T = M
+    ;
+	M = lit('$VAR'(NVAR))
+    ->
+	concat_atom(p, '_', NVAR)
+    ;
+	M = lit(T)
+    ->
+	true
+    ;
+	M =.. ML0,
+	flatten_term1(ML0, ML),
+	concat_atom(ML, '_', T)
+    ).
+
+flatten_term1([], []).
+flatten_term1([X|Xs], [Y|Ys]) :-
+	flatten_term(X, Y),
+	flatten_term1(Xs, Ys).
+
+assert_macro_if_new(M, E) :-
+    (
+	known_macro(M, E)
+    ->
+	true
+    ;
+	assert(macro(M,E))
+    ).
+
+known_macro(M, M).
+known_macro(M, E) :-
+	macro(M, E).
+
+% = parse_all_examples
+%
+% try out all examples of the current fragment in succession.
+
+open_latex_examples_window :-
+    (
+	producing_pdf
+    ->
+	parse_all_examples,
+        shell_warn('@PDF@ semantics.pdf >> texlog &')
+    ;
+	true
+    ).
+
+
+parse_all_examples :-
+	findall(example_phrase(B,C,D,E), (example_phrase(_A,B,C,D,E),B\==comment), List),
+	open_semantics_files,
+	get_option(paper_size, PaperSize),
+	latex_header(sem, PaperSize),
+	latex_init_ex_counter(sem),
+	latex_set_ex_counter(sem, 0),
+	deactivate_items,
+	parse_all_examples(List, 1),
+	activate_items,
+	latex_tail(sem),
+	close(sem),
+	pdflatex_semantics.
+
+parse_all_examples([], _).
+parse_all_examples([example_phrase(P,S,A,G)|Ns], X0) :-
+	format(sem, '~w.', [X0]),
+	reset_global_counters,
+	latex_print_sentence(S, '\\vdash', G, sem),
+	latex_step_ex_counter(sem),
+	parse_single_example(P, S, A, G),
+	X is X0 + 1,
+	parse_all_examples(Ns, X).
+
+parse_single_example(parse, String, _, Goal) :-
+	time(catch(test(String, Goal, 0), aborted,
+	           format('=== PARSE ABORTED! ===~n', []))).
+parse_single_example(prove, _, ListOfFormulas, Formula) :-
+	length(ListOfFormulas, Length),
+	list_of_words(Length, Words, String),
+	add_semantics(ListOfFormulas, ListOfSemFormulas),
+	get_option(paper_size, PaperSize),
+	latex_header(sem, PaperSize),
+	prove(ListOfSemFormulas, Formula, Words, String, 0).
+
+% = test(+String, +Formula)
+% = test(+String, +Formula, +DotFile)
+
+% test if String can be parsed as being of type Formula.
+% the string is first tokenized by means of tokenize_string/2, the
+% formulas corresponding to the words are retrieved from the lexicon
+% and macros are expanded in lookup/4, finally the results are passed
+% to prove/4.
+
+test(String, Formula) :-
+	reset_global_counters,
+	open_semantics_files,
+	get_option(paper_size, PaperSize),
+	latex_header(sem, PaperSize),
+	latex_print_sentence(String, '\\vdash', Formula, sem),
+	deactivate_items,
+	time(catch(test(String, Formula, 0), aborted,
+	           format('=== PARSE ABORTED! ===~n', []))),
+	activate_items,
+	latex_tail(sem),
+	close(sem),
+	pdflatex_semantics,
+	finished_dialog,
+	erase_dot_files.
+
+test(String, Goal0, Num) :-
+	tokenize_string(String, Words),
+	macro_expand(Goal0, Goal),
+	format(log, '~n=== START OF PARSE ===~2n~s |- ~w~2n', [String, Goal]),
+	format(log, '~s |- ~p~2n', [String, Goal]),
+	format('~n=== START OF PARSE ===~2n~s |- ~w~2n', [String, Goal]),
+	lookup(Words, ListOfFormulas, Goal0, Goal),
+	increase_global_counter('$LOOKUP', Lookup),
+	format(log, '=== START OF LOOKUP ~w ===~n', [Lookup]),
+	format('=== START OF LOOKUP ~w ===~n', [Lookup]),
+	prove(ListOfFormulas, Goal, Words, String, Num),
+	fail.
+test(_, _, _) :-
+	format(log, '=== END OF PARSE ===~n', []),
+	format('=== END OF PARSE ===~n', []).
+
+% = prove(+ListOfFormulas, +Formula)
+%
+% true if ListOfFormulas derives Formula.
+% adds a dummy word and a dummy semantics to every formula
+
+prove(ListOfFormulas, Formula) :-
+	reset_global_counters,
+	length(ListOfFormulas, Length),
+	list_of_words(Length, Words, String),
+	add_semantics(ListOfFormulas, ListOfSemFormulas),
+	open_semantics_files,
+	get_option(paper_size, PaperSize),
+	latex_header(sem, PaperSize),
+	deactivate_items,
+	time(catch(prove1(ListOfSemFormulas, Formula, Words, String, 0), aborted,
+	           format('=== PROOF ABORTED! ===~n', []))),
+	activate_items,
+	latex_tail(sem),
+	close(sem),
+	pdflatex_semantics,
+	finished_dialog,
+	erase_dot_files.
+
+add_semantics([], []).
+add_semantics([F|Fs], [F-_|Ss]) :-
+	add_semantics(Fs, Ss).
+
+add_semantics([], [], []).
+add_semantics([W|Ws], [F|Fs], [F-W|Ss]) :-
+	add_semantics(Ws, Fs, Ss).
+
+% = prove(+ListOfFormulas, +Formula, +InputString)
+
+prove(ListOfFormulas, Formula, Words, String, Num) :-
+	strip_values(ListOfFormulas, LoF),
+	format(log, '~p |- ~p~2n', [LoF, Formula]),
+	log_sequent_properties([Formula|LoF]),
+	time(catch(prove1(ListOfFormulas, Formula, Words, String, Num), next,
+	           format('=== LOOKUP ABORTED! ===~n', []))).
+% to use execution profile, replace the previous line by the following.
+%	profile(prove1(ListOfFormulas, Formula, String, Num), cumulative, 25).
+
+prove1(ListOfFormulas, Formula, Words, String, Num0) :-
+	retractall('$DOTFILE'(_)),
+	assert('$DOTFILE'(Num0)),
+	refresh_ps_file,
+	unfold(ListOfFormulas, Formula, Sem, N0, Root0, Leaves0,
+	        Neg, Pos, C0, P0, Mp0),
+	merge_lists(Words, Leaves0, Leaves),
+	all_waiting_components(Neg, Pos, P0, Avoid0, Mp0, Mp1),
+	active_pars(P0, [], Active0, Rest0, Avoid0, Mp1, Mp2),
+	portray_graph(Pos, Neg, Active0, Rest0, C0, String,
+                      Root0, Leaves, N0, Mp2),
+	par_graph(P0, Pos, Neg, Mp2, Mp3, Leaves, Root0, GraphTC),
+	connect(Neg, Pos, GraphTC, C0, C1, P0, P, Root0, Root,
+	        String, Leaves, N0, Mp3, Mp4),
+	all_par_roots(P, [], Avoid, Mp4, Mp5),
+	active_pars(P, [], Active, Rest, Avoid, Mp5, Mp6),
+%	portray_graph(Active, Rest, C1, String,
+%                     Root, Leaves, Num1, Num2, N0, Mp1),
+	contract(Active, Rest, String, Avoid, C1, N0,
+                 Root, Leaves, Mp6, _Mp, 0, _Ct, 0, _Gn, Num0, Formula, Sem),
+	fail.
+
+prove1(_, _, _, _, _) :-
+	output_statistics.
+
+% = list_of_words(+Num, ?List)
+%
+% generate dummy words "a b c d ..." in case no lexical lookup was
+% performed.
+% After "z" the next word will be "aa ab ac ..." etc until the final
+% word "zz" in case of a 702-word sentence.
+% For longer sentences, this predicate will not generate appropriate
+% longer words.
+
+list_of_words(Num, List, String) :-
+	list_of_words(0, Num, List, String, []).
+
+list_of_words(N0, N, L0, S0, S) :-
+    (
+	N0 >= N
+    ->
+	S0 = S
+    ;
+        (
+	    N0 < 26
+	->
+	    C is 97+N0,
+	    S0 = [C,32|S1],
+	    name(W, [C]),
+	    L0 = [W|L],
+	    N1 is N0+1,
+	    list_of_words(N1, N, L, S1, S)
+	;
+	    Y is 97+(N0 mod 26),
+	    X is 96+(N0 // 26),
+	    S0 = [X,Y,32|S1],
+	    name(W, [X,Y]),
+	    L0 = [W|L],
+	    N1 is N0+1,
+	    list_of_words(N1, N, L, S1, S)
+	)
+    ).
+
+% = connect(+NegativeAtoms,+PositiveAtoms)
+%
+% connects NegativeAtoms to PositiveAtoms.
+
+connect(Neg0, Pos0, GTC, C0, C, P0, P, R0, R,
+        String, Leaves, N0, Mp0, Mp) :-
+	keysort(Neg0, Neg),
+	keysort(Pos0, Pos),
+	connect1(Neg, Pos, GTC, C0, C, P0, P, R0, R, 
+	         String, Leaves, N0, Mp0, Mp).
+
+connect1([],[], _, C, C, P, P, R, R, _, _, _, Mp, Mp).
+connect1([A0|As0], Bs0, GTC0, C0, C, P0, P, R0, R,
+         String, Leaves, N0, Mp0, Mp) :-
+	check_runtime_limits,
+	length(Bs0, Cols),
+    (
+	acyclic_links([A0|As0], Bs0, GTC0, Mp0, Heap0)
+    ->
+	compute_weights(Heap0, Graph)
+    ;
+	increase_global_counter('$VIOL_ACC'),
+	fail
+    ),
+    (	
+	option_true(regin)
+    ->
+        (
+	    /* apply Regin's algorithm to remove axiom connections */
+	    /* which cannot be part of a complete matching */
+            regin(Graph, Cols, Vital, Del)
+	->
+
+	    format(log, 'Vital   : ~p~nRemove  : ~p~n', [Vital,Del]),
+	    update_heap(Vital, Del, Heap0, Heap)
+	;
+	    format(log, '* Totality failure! *~n', []),
+	    increase_global_counter('$VIOL_TOT'),
+	    fail
+	)
+    ;
+        Heap = Heap0
+    ),
+	get_option(link_mode, LinkM),
+    (
+	LinkM = partial,
+	Vital \== []
+    ->
+	link_all_axioms(Vital, [A0|As0], As, Bs0, Bs, C0, C1, P0, P1, R0, R1, Mp0, Mp1)
+     ;
+	LinkM = kbest
+    ->
+	compute_weights(Heap, Graph),
+	get_option(kbest_term, CAtom),
+	atom_to_expr(CAtom, CTerm, Cols),
+	K is CTerm,
+	% TODO change this so it uses the result of the Hungarian/4
+        % call from before
+	kbest(K, Graph, Cols, Matching, _),
+	link_all_axioms(Matching,[A0|As0], As, Bs0, Bs, C0, C1, P0, P1, R0, R1, Mp0, Mp1)
+     ;
+	/* pass control to the user, if required */
+	user_link(Heap, F, N, M),
+        increase_global_counter('$AXIOMS'),
+	insert_global_ordkeyset('$AXIOM_LIST', N, M),
+	select1(F-at(N,V0,_,FV0,_,_), [A0|As0], As),
+	select1(F-at(M,V,_,FV,_,_), Bs0, Bs),
+        special_linking(FV0, FV, V0, V),
+	replace(C0, N, M, C1, P0, P1, Mp0, Mp1),
+	replace_item(R0, M, N, R1)
+     ),
+	all_waiting_components(As, Bs, P1, Avoid, Mp1, Mp2),
+	active_pars(P1, [], Active, Rest, Avoid, Mp2, Mp3),
+	portray_graph(Bs, As, Active, Rest, C1, String,
+                      R1, Leaves, N0, Mp3),
+%       par_graph_from_heap(P1, Heap, Mp3, Mp4, Leaves, R1, GTC),
+	par_graph(P1, Bs, As, Mp3, Mp4, Leaves, R1, GTC),
+	connect1(As, Bs, GTC, C1, C, P1, P, R1, R,
+	         String, Leaves, N0, Mp4, Mp).
+
+compute_weights(Heap, G) :-
+	compute_pos_weights(Heap, empty, Pos),
+	compute_weights(Heap, Pos, empty, G).
+
+compute_pos_weights([], P, P).
+compute_pos_weights([_-x(Pol,_,I,W,_,_)|Hs], P0, P) :-
+	compute_pos_weights1(Pol, I, W, P0, P1),
+	compute_pos_weights(Hs, P1, P).
+
+compute_pos_weights1(-, _, _, P, P).
+compute_pos_weights1(+, I, W, P0, P) :-
+	btree_insert(P0, I, W, P).
+
+compute_weights([], _, G, G).
+compute_weights([_-x(Pol,_,N,Di,Bs,_)|Hs], P, G0, G) :-
+	compute_weights1(Pol, N, Di, Bs, P, G0, G1),
+	compute_weights(Hs, P, G1, G).
+
+compute_weights1(+, _, _, _, _, G, G).
+compute_weights1(-, I, Di, Bs, P, G0, G) :-
+	btree_insert(G0, I, V, G),
+	compute_weights2(Bs, Di, P, V).
+
+compute_weights2([], _, _, []).
+compute_weights2([_-J|As], DiI, P, [J-W|Bs]) :-
+	btree_get(P, J, DiJ),
+	W is abs(DiI-DiJ),
+	compute_weights2(As, DiI, P, Bs).
+
+% special_linking add iotas for moves from n to np
+
+special_linking(X0, X, V0, V) :-
+    (
+	current_predicate(empty_determiner_semantics/2)
+    ->
+        empty_determiner_semantics(Sem1, Sem2),
+        special_linking1(X0, X, V0, V, Sem1, Sem2)
+    ;
+        X0 = X,
+        V0 = V
+    ).
+
+special_linking1([_,_,X], [_,_,Y], V0, V, Sem1, Sem2) :-
+        var(X),
+        Y == p,
+	var(V),
+	!,
+	V0 = Sem2,
+	V = Sem1.
+special_linking1([_,_,X], [_,_,Y], V0, V, Sem1, Sem2) :-
+        var(Y),
+        X == p,
+	var(V0),
+	!,
+	V0 = Sem1,
+	V = Sem2.
+special_linking1(X, X, V, V, _, _).
+
+link_all_axioms([], As, As, Bs, Bs, C, C, P, P, R, R, Mp, Mp).
+link_all_axioms([I-J|Axs], As0, As, Bs0, Bs, C0, C, P0, P, R0, R, Mp0, Mp) :-
+	select1(F-at(J,V0,_,FV0,_,_), As0, As1),
+	select1(F-at(I,V,_,FV,_,_), Bs0, Bs1),
+	special_linking(FV0, FV, V0, V),
+	link_axioms(I, J, C0, C1, P0, P1, R0, R1, Mp0, Mp1),
+	link_all_axioms(Axs, As1, As, Bs1, Bs, C1, C, P1, P, R1, R, Mp1, Mp).
+
+link_axioms(I, J, C0, C, P0, P, R0, R, Mp0, Mp) :-
+        increase_global_counter('$AXIOMS'),
+	insert_global_ordkeyset('$AXIOM_LIST', I, J),
+	replace(C0, J, I, C, P0, P, Mp0, Mp),
+	replace_item(R0, I, J, R).
+
+% = acyclic_links(+PosAtoms, +NegAtoms, +Graph, +Map, -Heap)
+%
+% true if Heap contains all ways of connecting PosAtoms to NegAtoms in
+% a way which does not make Graph cyclic. The number of possible
+% connections for the atomic formula will be the position in the heap
+% so that we can remove the items with the least connections easily.
+
+acyclic_links([A|As], [B|Bs], GTC, Mp, H) :-
+    (
+	option_true(zero_heap)
+    ->
+	Min = 0
+    ;
+	Min = -1
+    ),
+	acyclic_pos_links([A|As], [B|Bs], Min, GTC, Mp, [], H1),
+	acyclic_neg_links([B|Bs], [A|As], Min, GTC, Mp, H1, H).
+
+
+acyclic_pos_links([], _, _, _, _, H, H).
+acyclic_pos_links([F-at(N,V,Di,FV,U0,U)|As], Bs, Min, GTC, Mp, H0, H) :-
+	acyclic_pos(Bs, F, N, V, FV, U0, U, GTC, Mp, Cs, Ds),
+	length(Cs, Key),
+	Key > Min,
+	ord_insert(H0, Key-x(+,F,N,Di,Cs,Ds), H1), 
+	acyclic_pos_links(As, Bs, Min, GTC, Mp, H1, H).
+
+acyclic_pos([], _, _, _, _, _, _, _, _, [], []).
+acyclic_pos([FB-at(NB,V,_Di,FV,U0,U1)|Bs], FA, NA, VA, FVA, U2, U, GTC, Mp, Cs0, Ds0) :-
+    (
+	FA = FB,
+	consistent_axiom(V, VA, FV, FVA, U2, U, U0, U1, NA, NB)
+    ->
+	aref(NB, Mp, BC),
+	btree_get(GTC, BC, LB),
+	(
+	    ord_member(NA, LB)
+	->
+	    Cs0 = Cs,
+	    Ds0 = [FB-NB|Ds]
+	;
+	    Cs0 = [FB-NB|Cs],
+	    Ds0 = Ds
+	)
+    ;
+	Cs0 = Cs,
+	Ds0 = [FB-NB|Ds]
+    ),
+	acyclic_pos(Bs, FA, NA, VA, FVA, U2, U, GTC, Mp, Cs, Ds).
+
+acyclic_neg_links([], _, _, _, _, H, H).
+acyclic_neg_links([FA-at(NA,VA,Di,FVA,U0,U)|As], Bs, Min, GTC, Mp, H0, H) :-
+	aref(NA, Mp, CA),
+	btree_get(GTC, CA, List),
+	acyclic_neg(Bs, FA, NA, VA, FVA, U0, U, List, Mp, Cs, Ds),
+	length(Cs, Key),
+	Key > Min,
+	ord_insert(H0, Key-x(-,FA,NA,Di,Cs,Ds), H1),
+	acyclic_neg_links(As, Bs, Min, GTC, Mp, H1, H).
+
+acyclic_neg([], _, _, _, _, _, _, _, _, [], []).
+acyclic_neg([FB-at(B,VB,_Di,FVB,U2,U)|Bs], FA, NA, VA, FVA, U0, U1, List, Mp, Cs0, Ds0) :-
+    (
+	FA = FB,
+	consistent_axiom(VB, VA, FVB, FVA, U2, U, U0, U1, NA, B)
+    ->
+	aref(B, Mp, CB),
+	(
+	    ord_member(CB, List)
+	->
+	    Cs0 = Cs,
+	    Ds0 = [FB-B|Ds]
+	;
+	    Cs0 = [FB-B|Cs],
+	    Ds0 = Ds
+	)
+    ;
+	Cs0 = Cs,
+        Ds0 = [FB-B|Ds]
+    ),
+	acyclic_neg(Bs, FA, NA, VA, FVA, U0, U1, List, Mp, Cs, Ds).
+
+% ===================================================================
+% =                 Axiom Link Resctrictions                        =
+% ===================================================================
+
+% = consistent_axiom(+NegSem, +PosSem, +NegVars, +PosVars)
+%
+% an axiom connection is consistent when the first-order variables
+% as well as the two semantic terms corresponding to the atoms are
+% unifyable (this is always true, given that the positive term is
+% a variable, but we could imagine a more detailed type system here,
+% where we would demand the positive argument to be animate, for 
+% example) .
+% for inert unary connectives, the two lists associated with the
+% atoms are appended and a simple context free grammar checks
+% contractability.
+
+consistent_axiom(Sem1, Sem2, Vars0, Vars, U0, U1, U2, U, NA, NB) :-
+	format(log, '~w-~w : ~w = ~w~n', [NA, NB, Vars0, Vars]),
+	\+ \+ 
+    (
+	unify_with_occurs_check(Sem1, Sem2), 
+	Vars = Vars0,
+        U1 = U2,
+        U = [],
+	format(log, '~w-~w : ~w', [NA, NB, U0]),
+	parse_paths(U0, U)
+    ).
+
+parse_paths(L0, L) :-
+    (
+	parse_uni(L0, L)
+    ->
+	format(log, ' v~n', [])
+    ;
+	format(log, ' x~n', []),
+	fail
+    ).
+
+parse_uni -->
+	[].
+parse_uni -->
+        { external_dia(I) },
+	[m(I)],
+	parse_uni.
+parse_uni -->
+        { external(I) },
+	[m1(I)],
+	parse_uni.
+parse_uni -->
+        { external(I) },
+	[m2(I)],
+	parse_uni.
+parse_uni -->
+	[l(I)],
+	parse_uni_contr,
+	[m(I)],
+	parse_uni.
+parse_uni -->
+	[l1(I)],
+	parse_uni_contr,
+	[m1(I)],
+	parse_uni.
+parse_uni -->
+	[l2(I)],
+	parse_uni_contr,
+	[m2(I)],
+	parse_uni.
+parse_uni -->
+	[m(I)],
+	parse_uni_contr,
+	[r(I)],
+	parse_uni.
+parse_uni -->
+	[m2(I)],
+	parse_uni_contr,
+	[r2(I)],
+	parse_uni.
+parse_uni -->
+	[m1(I)],
+	parse_uni_contr,
+	[r1(I)],
+	parse_uni.
+
+parse_uni_contr -->
+	[].
+parse_uni_contr -->
+	[l(I)],
+	parse_uni_contr,
+	[m(I)],
+	parse_uni_contr.
+parse_uni_contr -->
+	[l1(I)],
+	parse_uni_contr,
+	[m1(I)],
+	parse_uni_contr.
+parse_uni_contr -->
+	[l2(I)],
+	parse_uni_contr,
+	[m2(I)],
+	parse_uni_contr.
+parse_uni_contr -->
+	[m(I)],
+	parse_uni_contr,
+	[r(I)],
+	parse_uni_contr.
+parse_uni_contr -->
+	[m2(I)],
+	parse_uni_contr,
+	[r2(I)],
+	parse_uni_contr.
+parse_uni_contr -->
+	[m1(I)],
+	parse_uni_contr,
+	[r1(I)],
+	parse_uni_contr.
+
+% ===================================================================
+% =                Shared Forest Expansion                          =
+% ===================================================================
+
+% = expand(+ComponentIn,?ComponentOut)
+%
+% expands a component according to the structural rules of the
+% system.
+
+expand_component(cmp(C0, C1), C, N0, N, M, Mp0, Mp, 
+                 Ct0, Ct, Gn0, Gn) :-
+	initial_yields(C1, M, YV0, VY0),
+    (
+	'$MAX_GEN'(MGen)
+    ->
+	true
+    ;
+	MGen = 9999
+    ),
+	expand_component(C0, C1, C, N0, N, M, Mp0, Mp,
+	                 YV0, _YV, VY0, _VY, Ct0, Ct, Gn0, Gn, MGen).
+	
+% = expand_component(+New, +Component, -NewComponent, +NVN, -NVN,
+%                    +CRoot, +Map, -Map, +Ct, -Ct). 
+%
+% Expand Component according to the structural conversions of the
+% system with the restriction that at least of item of the conversions
+% must be from New.
+
+expand_component(empty, C, C, N, N, M,
+	            Mp, Mp, YV, YV, VY, VY, Ct, Ct, Gn, Gn, _) :-
+	format(log, '=== <~w> ===~n', [M]).
+
+% = 234-trees
+
+expand_component(two(A1,A2,A3,A4), C0, C, N0, N, M,
+	             Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct, Gn0, Gn, MG) :-
+	check_runtime_limits,
+	format(log, 'New(~w): ', [Gn0]),
+	portray_btree(two(A1,A2,A3,A4), log),
+	Gn1 is Gn0+1,
+    (
+	Gn0 >= MG
+    ->
+	New = empty,
+	C1 = C0,
+	N0 = N1,
+	Mp0 = Mp1,
+	YV0 = YV1,
+	VY0 = VY1,
+	Ct0 = Ct1,
+	format('~2nAborting: generation ~w reached~2n', [MG])
+    ;
+	apply_conversions(two(A1,A2,A3,A4), New, C0, C1, N0, N1, M,
+	                  Mp0, Mp1, YV0, YV1, VY0, VY1, Ct0, Ct1)
+    ),
+	expand_component(New, C1, C, N1, N, M, 
+	                      Mp1, Mp, YV1, YV, VY1, VY, Ct1, Ct, Gn1, Gn, MG).
+expand_component(three(A1,A2,A3,A4,A5,A6,A7), C0, C, N0, N, M,
+	               Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct, Gn0, Gn, MG) :-
+	check_runtime_limits,
+	format(log, 'New(~w): ', [Gn0]),
+	portray_btree(three(A1,A2,A3,A4,A5,A6,A7), log),
+	Gn1 is Gn0+1,
+    (
+	Gn0 >= MG
+    ->
+	New = empty,
+	C1 = C0,
+	N0 = N1,
+	Mp0 = Mp1,
+	YV0 = YV1,
+	VY0 = VY1,
+	Ct0 = Ct1,
+	format('~2nAborting: generation ~w reached~2n', [MG])
+    ;
+	apply_conversions(three(A1,A2,A3,A4,A5,A6,A7), New, C0, C1, N0, N1, M,
+	                  Mp0, Mp1, YV0, YV1, VY0, VY1, Ct0, Ct1)
+    ),
+	expand_component(New, C1, C, N1, N, M, 
+	                      Mp1, Mp, YV1, YV, VY1, VY, Ct1, Ct, Gn1, Gn, MG).
+
+expand_component(four(A1,A2,A3,A4,A5,A6,A7,A8,A9,A10), C0, C, N0, N, M,
+	              Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct, Gn0, Gn, MG) :-
+	check_runtime_limits,
+	format(log, 'New(~w): ', [Gn0]),
+	portray_btree(four(A1,A2,A3,A4,A5,A6,A7,A8,A9,A10), log),
+	Gn1 is Gn0+1,
+    (
+	Gn0 >= MG
+    ->
+	New = empty,
+	C1 = C0,
+	N0 = N1,
+	Mp0 = Mp1,
+	YV0 = YV1,
+	VY0 = VY1,
+	Ct0 = Ct1,
+	format('~2nAborting: generation ~w reached~2n', [MG])
+    ;
+	apply_conversions(four(A1,A2,A3,A4,A5,A6,A7,A8,A9,A10), New, C0, C1, N0, N1, M,
+	                  Mp0, Mp1, YV0, YV1, VY0, VY1, Ct0, Ct1)
+    ),
+	expand_component(New, C1, C, N1, N, M, 
+	                      Mp1, Mp, YV1, YV, VY1, VY, Ct1, Ct, Gn1, Gn, MG).
+
+% = red-black trees
+
+expand_component(black(A1,A2,A3,A4), C0, C, N0, N, M,
+	               Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct, Gn0, Gn, MG) :-
+	check_runtime_limits,
+	format(log, 'New(~w): ', [Gn0]),
+	portray_btree(black(A1,A2,A3,A4), log),
+	Gn1 is Gn0+1,
+    (
+	Gn0 >= MG
+    ->
+	New = empty,
+	C1 = C0,
+	N0 = N1,
+	Mp0 = Mp1,
+	YV0 = YV1,
+	VY0 = VY1,
+	Ct0 = Ct1,
+	format('~2nAborting: generation ~w reached~2n', [MG])
+    ;
+	apply_conversions(black(A1,A2,A3,A4), New, C0, C1, N0, N1, M,
+	                  Mp0, Mp1, YV0, YV1, VY0, VY1, Ct0, Ct1)
+    ),
+	expand_component(New, C1, C, N1, N, M, 
+	                      Mp1, Mp, YV1, YV, VY1, VY, Ct1, Ct, Gn1, Gn, MG).
+
+% = AVL trees
+
+expand_component(tree(A1,A2,A3,A4,A5), C0, C, N0, N, M,
+	              Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct, Gn0, Gn, MG) :-
+	check_runtime_limits,
+	format(log, 'New(~w): ', [Gn0]),
+	portray_btree(tree(A1,A2,A3,A4,A5), log),
+	Gn1 is Gn0+1,
+    (
+	Gn0 >= MG
+    ->
+	New = empty,
+	C1 = C0,
+	N0 = N1,
+	Mp0 = Mp1,
+	YV0 = YV1,
+	VY0 = VY1,
+	Ct0 = Ct1,
+	format('~2nAborting: generation ~w reached~2n', [MG])
+    ;
+	apply_conversions(tree(A1,A2,A3,A4,A5), New, C0, C1, N0, N1, M,
+	                  Mp0, Mp1, YV0, YV1, VY0, VY1, Ct0, Ct1)
+    ),
+	expand_component(New, C1, C, N1, N, M, 
+	                      Mp1, Mp, YV1, YV, VY1, VY, Ct1, Ct, Gn1, Gn, MG).
+
+% = applying the conversions to a component
+
+apply_conversions(_New0, New, All0, All, N0, N, M,
+	          Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct) :-
+	manual_expand(yes),
+	!,
+	New = empty,
+	YV = YV0,
+	VY = VY0,
+	Ct = Ct0,
+	manual_apply_conversions(All0, All, N0, N, M, Mp0, Mp).
+
+apply_conversions(New0, New, All0, All, N0, N, M,
+	          Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct) :-
+	auto_apply_conversions(New0, New, All0, All, N0, N, M,
+			       Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct).
+
+% TODO: complete this predicate to allow manual application of
+% structural rules.
+manual_apply_conversions(All0, All, N0, N, _M,
+			 Mp0, Mp) :-
+	All = All0,
+	N0 = N,
+	Mp0 = Mp.
+
+auto_apply_conversions(New0, New, All0, All, N0, N, M,
+	          Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct) :-
+	findall(Name-Outs, (  
+	                 btree_member(New0, X, L),
+	                 member(Y, L),
+			 conversion(Ins, Outs, _Int, Name),
+			 member(X-Y, Ins),
+			 match(Ins, Outs, All0, Name)
+		           ), PotentiallyNew0),
+	/* remove duplicates from PotentiallyNew0 */
+	freeze_additions(PotentiallyNew0),
+	sort(PotentiallyNew0, PotentiallyNew1),
+	melt_additions(PotentiallyNew1, PotentiallyNew),
+	map_add_new(PotentiallyNew, All0, All, empty, New,
+	            N0, N, M, Mp0, Mp, YV0, YV, VY0, VY, Ct0, Ct).
+
+map_add_new([], C, C, New, New, N, N, _, Mp, Mp, 
+	        YV, YV, VY, VY, Ct, Ct).
+map_add_new([Name-X0|Xs], C0, C, New0, New, N0, N, M, Mp0, Mp,
+	        YV0, YV, VY0, VY, Ct0, Ct) :-
+	format(log, '[~w]~n', [Name]),
+	compute_yields(X0, [], X, VY0, VY1),
+	add_outs(X, C0, C1, New0, New1, N0, N1, M, Mp0, Mp1,
+                    YV0, YV1, VY1, VY2, Ct0, Ct1),
+	map_add_new(Xs, C1, C, New1, New, N1, N, M,
+	                Mp1, Mp, YV1, YV, VY2, VY, Ct1, Ct).
+
+% = initial_yields(+Component, +Root, -Yields)
+%
+% compute, starting from Root, the Yields of every point in the
+% Component.
+
+initial_yields(Cmp, M, YV, VY) :-
+	initial_yields(Cmp, M, empty, YV, empty, VY).
+
+initial_yields(Cmp, R, YV0, YV, VY0, VY) :-
+    (
+	btree_get(Cmp, R, Vs)
+    ->
+	initial_yields1(Vs, _, R, Cmp, YV0, YV, VY0, VY, _YV)
+    ;
+	YV = YV0,
+	VY = VY0
+    ).
+
+initial_yields1([], _I, P, _, YV, YV, VY0, VY, YP) :-
+	btree_put(VY0, P, YP, VY).
+initial_yields1([E|Es], I, P, Cmp, YV0, YV, VY0, VY, YP) :-
+ 	initial_yields2(E, P, Cmp, YV0, YV1, VY0, VY1, YP),
+	initial_yields1(Es, I, P, Cmp, YV1, YV, VY1, VY, YP).
+
+initial_yields2(p(I, A, B), P, Cmp, YV0, YV, VY0, VY, YP) :-
+    (
+	btree_get(VY0, A, YA)
+    ->
+	YV1 = YV0,
+	VY1 = VY0
+    ;
+	(
+	    btree_get(Cmp, A, As)
+	->
+	    initial_yields1(As, I, A, Cmp, YV0, YV1, VY0, VY1, YA)
+	;
+	    btree_put(VY0, A, [A], VY1),
+	    YV1 = YV0,
+	    YA = [A]
+	)
+    ),
+    (
+	btree_get(VY1, B, YB)
+    ->
+	YV2 = YV1,
+	VY = VY1
+    ;
+	(
+	    btree_get(Cmp, B, Bs)
+	->
+	    initial_yields1(Bs, I, B, Cmp, YV1, YV2, VY1, VY, YB)
+	;
+	    btree_put(VY1, B, [B], VY),
+	    YV2 = YV1,
+	    YB = [B]
+	)
+    ),
+	ord_union(YA, YB, YP),
+	btree_put(YV2, b(P,I,YA), A, YV3),
+	btree_put(YV3, b(P,I,YB), B, YV).
+
+initial_yields2(dia(I, A), P, Cmp, YV0, YV, VY0, VY, YA) :-
+    (
+	btree_get(Cmp, A, As)
+    ->
+	initial_yields1(As, I, A, Cmp, YV0, YV1, VY0, VY, YA)
+    ;
+	btree_put(VY0, A, [A], VY),
+	YV1 = YV0,
+	YA = [A]
+    ),
+	btree_put(YV1, u(P,I), A, YV).
+
+/* This part commented out for now, should be a version of
+   initial_yields which only computes the vertex-yields function
+
+% = initial_simple_yields(+Component, +Root, -Yields)
+%
+% compute, starting from Root, the Yields of every point in the
+% Component.
+
+initial_simple_yields(Cmp, M, VY) :-
+	initial_simple_yields(Cmp, M, empty, VY).
+
+initial_simple_yields(Cmp, R, VY0, VY) :-
+    (
+	btree_get(Cmp, R, Vs)
+    ->
+	initial_simple_yields1(Vs, _, R, Cmp, VY0, VY)
+    ;
+	VY = VY0
+    ).
+
+initial_simple_yields1([], _I, P, _, YV, YV, VY0, VY, YP) :-
+	btree_put(VY0, P, YP, VY).
+initial_yields1([E|Es], I, P, Cmp, YV0, YV, VY0, VY, YP) :-
+ 	initial_yields2(E, P, Cmp, YV0, YV1, VY0, VY1, YP),
+	initial_yields1(Es, I, P, Cmp, YV1, YV, VY1, VY, YP).
+
+initial_yields2(p(I, A, B), P, Cmp, YV0, YV, VY0, VY, YP) :-
+    (
+	btree_get(VY0, A, YA)
+    ->
+	YV1 = YV0,
+	VY1 = VY0
+    ;
+	(
+	    btree_get(Cmp, A, As)
+	->
+	    initial_yields1(As, I, A, Cmp, YV0, YV1, VY0, VY1, YA)
+	;
+	    btree_put(VY0, A, [A], VY1),
+	    YV1 = YV0,
+	    YA = [A]
+	)
+    ),
+    (
+	btree_get(VY1, B, YB)
+    ->
+	YV2 = YV1,
+	VY = VY1
+    ;
+	(
+	    btree_get(Cmp, B, Bs)
+	->
+	    initial_yields1(Bs, I, B, Cmp, YV1, YV2, VY1, VY, YB)
+	;
+	    btree_put(VY1, B, [B], VY),
+	    YV2 = YV1,
+	    YB = [B]
+	)
+    ),
+	ord_union(YA, YB, YP),
+	btree_put(YV2, b(P,I,YA), A, YV3),
+	btree_put(YV3, b(P,I,YB), B, YV).
+
+initial_yields2(dia(I, A), P, Cmp, YV0, YV, VY0, VY, YA) :-
+    (
+	btree_get(Cmp, A, As)
+    ->
+	initial_yields1(As, I, A, Cmp, YV0, YV1, VY0, VY, YA)
+    ;
+	btree_put(VY0, A, [A], VY),
+	YV1 = YV0,
+	YA = [A]
+    ),
+	btree_put(YV1, u(P,I), A, YV).
+*/
+
+% = add_links(+ListOfAtomTuples, +GraphIn, -GraphOut, +MapIn, -MapOut)
+%
+% add all possible axiom links according to ListOfAtomTuples to GraphIn
+% all axiom links excluded by the current axiom link will be added to
+% the excluded list for this axiom link.
+%
+% TODO: update here so that vital edges are unique for their vertex and
+%       impossible edges are removed.
+
+add_links([], G, G, Mp, Mp).
+add_links([t(_A, _L, Ns, Ms)|Ts], G0, G, Mp0, Mp) :-
+	add_links1(Ns, Ns, Ms, G0, G1, Mp0, Mp1),
+	add_links(Ts, G1, G, Mp1, Mp).
+
+add_links1([], _, _, G, G, Mp, Mp).
+add_links1([N0|Ns], Bs, Ms, G0, G, Mp0, Mp) :-
+	patterns(Ms, Bs, Ms, N0, L0, []),
+	ds_find(Mp0, N0, N, Mp1),
+	btree_get_replace(G0, N, L2, L, G1),
+	ord_key_delete(L0, N, L1),
+	ord_key_union_i(L1, L2, L),
+	add_links1(Ns, Bs, Ms, G1, G, Mp1, Mp).
+
+add_links_from_heap([], G, G, Mp, Mp).
+add_links_from_heap([_-x(P,_,I,_,L,_)|Ls], G0, G, Mp0, Mp) :-
+	add_links_from_heap1(P, I, L, G0, G1, Mp0, Mp1),
+	add_links_from_heap(Ls, G1, G, Mp1, Mp).
+
+add_links_from_heap1(+, _, _, G, G, Mp, Mp).
+add_links_from_heap1(-, I0, M0, G0, G, Mp0, Mp) :-
+	ds_find(Mp0, I0, I, Mp1),
+	produce_links(M0, M, Mp1, Mp),
+	btree_update(G0, I, M, G).
+
+produce_links([], [], Mp, Mp).
+produce_links([_-N0|Ls], [N|Ms], Mp0, Mp) :-
+	ds_find(Mp0, N0, N, Mp1),
+	produce_links(Ls, Ms, Mp1, Mp).
+
+patterns([], _, _, _, L, L).
+patterns([N|Ns], As, Bs, M, [N-X0|L0], L) :-
+	pattern(As, Bs, M, N, X0, []),
+	patterns(Ns, As, Bs, M, L0, L).
+
+pattern([A|As], Bs, M, N) -->
+    (
+	{ A = M }
+    ->
+	pattern1(Bs, M, N),
+	pattern2(As, N)
+    ;
+	[A-N],
+	pattern(As, Bs, M, N)
+    ).
+
+pattern1([], _, _) -->
+	[].
+pattern1([C|Cs], M, N) -->
+    (
+	{C = N}
+    ->
+	[]
+    ;
+	[M-C]
+    ),
+	pattern1(Cs, M, N).
+
+pattern2([], _) -->
+	[].
+pattern2([B|Bs], N) -->
+	[B-N],
+	pattern2(Bs, N).
+
+% = separate_atoms(+Pos, +Neg, +AtList)
+%
+% separates the positive and negative atoms into a list of 4-tuples
+% of the form t(At, Length, Pos, Neg) where At is an atomic formula,
+% Pos is a list of Length positive occurrences of At and Neg is a list
+% of Length negative occurrences of At.
+%
+% Fails if the number of positive occurences of any atomic formula
+% is not equal to the number of its negative occurrences.
+
+separate_atoms([], Pos, Neg, AtList) :-
+	separate_atoms(Pos, Neg, AtList).
+separate_atoms([I-J|Es], Pos0, Neg0, [t(A,1,[I],[J])|Ts]) :-
+    (
+	select1(A-at(I,_,_,_,_,_), Pos0, Pos)
+    ->
+	true
+    ;
+	Pos = Pos0
+    ),
+    (
+	select1(A-at(J,_,_,_,_,_), Neg0, Neg)
+    ->
+	true
+    ;
+	Neg = Neg0
+    ),
+	separate_atoms(Es, Pos, Neg, Ts).
+separate_atoms([], [], []).
+separate_atoms([A-at(N,_,_,_,_,_)|As], [A-at(M,_,_,_,_,_)|Bs], [t(A,L,[N|Ns],[M|Ms])|Cs]) :-
+	separate_atoms(As, Bs, A, Cs, Ns, Ms, 1, L).
+
+separate_atoms([], [], _, [], [], [], L, L).
+separate_atoms([A0-at(N,_,_,_,_,_)|As], [A-at(M,_,_,_,_,_)|Bs], B, Cs0, Ns0, Ms0, L0, L) :-
+    (
+	A0 \== A
+    ->
+	format(log, 'Count check failure: -~p +~p~n', [A, A0]),
+	format('Count check failure: -~p +~p~n', [A, A0]),
+	fail
+    ;
+	true
+    ),
+    (
+	A = B
+    ->
+	Ns0 = [N|Ns],
+	Ms0 = [M|Ms],
+	Cs = Cs0,
+	K0 is L0+1,
+	K = L
+    ;
+	Ns0 = [],
+	Ms0 = [],
+	L = L0,
+	K0 = 1,
+	Cs0 = [t(A, K, [N|Ns],[M|Ms])|Cs]
+    ),
+	separate_atoms(As, Bs, A, Cs, Ns, Ms, K0, K).
+
+% compute the par graph of a proof net, ie. a graph consisting simply
+% of a vertex for each component and one or two directed edges for
+% every par link.
+
+par_graph_from_heap(Pars, Heap, Map0, Map, Leaves, R, GraphF) :-
+	array_to_list(Map0, List),
+	par_graph_vertices(List, empty, Graph0, empty, GRT0),
+	/* construct the (simpler) par graph for the acyclicity test */
+	par_graph(Pars, Map0, Map1, GRT0, GRT),
+	rt_closure(GRT, Graph),
+	/* construct the par graph with excluded axiom link information */
+        /* for the connectedness test */
+	leaf_paths(Leaves, R, Map1, Map2, Paths),
+	par_graph2(Pars, Map2, Map3, Graph0, Graph2, R, L0, Paths),
+	sort(L0, L),
+	add_links_from_heap(Heap, Graph2, Graph3, Map3, Map4),
+	graph:graph2dot(Graph3, 'before.dot'),
+	floyd_warshall(Graph3, GraphP),
+	graph:graph2dot(GraphP, 'after.dot'),
+	union_all(L, GraphP, [], Union),
+	add_union_paths(Union, Map4, Map, Graph, GraphF).
+	
+par_graph(Pars, Pos0, Neg0, Map0, Map, Leaves, R, GraphF) :-
+	keysort(Pos0, Pos),
+	keysort(Neg0, Neg),
+	/* construct the (simpler) par graph for the acyclicity test */
+	array_to_list(Map0, List),
+	par_graph_vertices(List, empty, Graph0, empty, GRT0),
+	par_graph(Pars, Map0, Map1, GRT0, GRT1),
+	rt_closure(GRT1, GRT2),
+	/* construct the par graph with information about the excluded */
+        /* axiom links for the connectedness test */
+	separate_atoms(Pos, Neg, Sep),
+	leaf_paths(Leaves, R, Map1, Map2, Paths),
+	par_graph2(Pars, Map2, Map3, Graph0, Graph1, R, L0, Paths),
+	sort(L0, L),
+	add_links(Sep, Graph1, Graph2, Map3, Map4),
+	graph:graph2dot(Graph2, 'before.dot'),
+	floyd_warshall(Graph2, GraphP),
+	graph:graph2dot(GraphP, 'after.dot'),
+	union_all(L, GraphP, [], Union),
+	add_union_paths(Union, Map4, Map, GRT2, GraphF).
+
+add_union_paths([], Mp, Mp, G, G).
+add_union_paths([A0-B0|As], Mp0, Mp, G0, G) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp2),
+	btree_get_replace(G0, A, LA0, LA, G1),
+	ord_insert(LA0, B, LA),
+	add_union_paths(As, Mp2, Mp, G1, G).
+
+% = leaf_paths(+Leaves, +Goal, +ComponentMapIn, -ComponentMapOut, Paths)
+%
+% true if Paths is a list of paths from the Goal to each of the Leaves
+
+leaf_paths([], _, Mp, Mp, []).
+leaf_paths([L0-_|Ls], G, Mp0, Mp, [G-L|Ms]) :-
+	ds_find(Mp0, L0, L, Mp1),
+	leaf_paths(Ls, G, Mp1, Mp, Ms).
+
+% = union_all(+Paths, +ClosureGraph, +InList, -OutList)
+%
+% true if OutList is the union of all the axiom links which are excluded
+% for any of the Paths in ClosureGraph. we do this by simply retrieving
+% the excluded axioms for each of the paths in the transitive closure
+% graph and accumulating the values using set union.
+
+union_all([], _, L, L).
+union_all([A-B|Ls], GraphP, L0, L) :-
+    (
+	A == B
+    ->
+	L1 = []
+    ;
+	btree_get(GraphP, A, AL),
+	ord_key_member(B, AL, L1)
+    ),
+	ord_union(L0, L1, L2),
+	union_all(Ls, GraphP, L2, L).
+
+% = par_graph_vertices(+ComponentList, +GraphIn, -GraphOut)
+%
+% true if GraphOut is GraphIn with a new (empty) node added for each of
+% the components in ComponentList.
+
+par_graph_vertices([], G, G, H, H).
+par_graph_vertices([_-P|Ps], G0, G, H0, H) :-
+	btree_put(G0, P, [P-[]], G1),
+        btree_put(H0, P, [], H1),
+	par_graph_vertices(Ps, G1, G, H1, H).
+
+% = par_graph(+Pars, +MapIn, -MapOut, +GraphIn, -GraphOut)
+%
+% true if GraphOut is GraphIn with the edges for each of the par links
+% added.
+
+par_graph([], Mp, Mp, G, G).
+par_graph([P|Ps], Mp0, Mp, G0, G) :-
+	par_graph1(P, Mp0, Mp1, G0, G1),
+	par_graph(Ps, Mp1, Mp, G1, G).
+
+% = par_graph(+Par, +MapIn, -MapOut, +GraphIn, -GraphOut)
+%
+% true if GraphOut is GraphIn with the edges for a single par link
+% added.
+
+par_graph1(p(_,A0,B0,C0), Mp0, Mp, G0, G) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp2),
+	ds_find(Mp2, C0, C, Mp),
+	btree_get_replace(G0, B, LB0, LB, G1),
+	ord_insert(LB0, A, LB),
+	btree_get_replace(G1, C, LC0, LC, G), 
+	ord_insert(LC0, A, LC).
+par_graph1(dl(_,A0,_,C0), Mp0, Mp, G0, G) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, C0, C, Mp),
+	btree_get_replace(G0, A, L0, L, G),
+	ord_insert(L0, C, L).
+par_graph1(dr(_,A0,B0,_), Mp0, Mp, G0, G) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp),
+	btree_get_replace(G0, A, L0, L, G),
+	ord_insert(L0, B, L).
+par_graph1(dia(_,A0,B0), Mp0, Mp, G0, G) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp),
+	btree_get_replace(G0, B, L0, L, G),
+	ord_insert(L0, A, L).
+par_graph1(box(_,A0,B0), Mp0, Mp, G0, G) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp),
+	btree_get_replace(G0, A, L0, L, G),
+	ord_insert(L0, B, L).
+
+% =
+
+par_graph2([], Mp, Mp, G, G, _, L, L).
+par_graph2([P|Ps], Mp0, Mp, G0, G, Goal, L0, L) :-
+	par_graph1(P, Mp0, Mp1, G0, G1, Goal, L0, L1),
+	par_graph2(Ps, Mp1, Mp, G1, G, Goal, L1, L).
+
+
+par_graph1(p(_,A0,B0,C0), Mp0, Mp, G0, G, Goal, [Goal-B,Goal-C|P], P) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp2),
+	ds_find(Mp2, C0, C, Mp),
+	btree_get_replace(G0, B, LB0, LB, G1),
+	ord_insert(LB0, A-[], LB),
+	btree_get_replace(G1, C, LC0, LC, G),
+	ord_insert(LC0, A-[], LC).
+par_graph1(dl(_,A0,B0,C0), Mp0, Mp, G0, G, Goal, [Goal-C,A-B|P], P) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp2),
+	ds_find(Mp2, C0, C, Mp),
+	btree_get_replace(G0, C, L0, L, G),
+	ord_insert(L0, A-[], L).
+par_graph1(dr(_,A0,B0,C0), Mp0, Mp, G0, G, Goal, [Goal-B,A-C|P], P) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp2),
+	ds_find(Mp2, C0, C, Mp),
+	btree_get_replace(G0, B, L0, L, G),
+	ord_insert(L0, A-[], L).
+par_graph1(dia(_,A0,B0), Mp0, Mp, G0, G, _, P, P) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp),
+	btree_get_replace(G0, B, L0, L, G),
+	ord_insert(L0, A-[], L).
+par_graph1(box(_,A0,B0), Mp0, Mp, G0, G, _, P, P) :-
+	ds_find(Mp0, A0, A, Mp1),
+	ds_find(Mp1, B0, B, Mp),
+	btree_get_replace(G0, B, L0, L, G),
+	ord_insert(L0, A-[], L).
+
+% =
+
+compute_yields([], X, X, VY, VY).
+compute_yields([A|As], X0, X, VY0, VY) :-
+	compute_yields1(A, VY0, VY1),
+	compute_yields(As, [A|X0], X, VY1, VY).
+
+compute_yields1(A-B, VY0, VY) :-
+	compute_yields2(B, A, VY0, VY).
+
+compute_yields2(p(_I, A, B), C, VY0, VY) :-
+	btree_get(VY0, A, YA),
+	btree_get(VY0, B, YB),
+	ord_union(YA, YB, YC),
+	btree_put(VY0, C, YC, VY).
+compute_yields2(dia(_, A), C, VY0, VY) :-
+	btree_get(VY0, A, YA),
+	btree_put(VY0, C, YA, VY).
+
+freeze_additions([]).
+freeze_additions([_-Outs|Xs]) :-
+	numbervars(Outs, 0, _),
+	freeze_additions(Xs).
+
+melt_additions([], []).
+melt_additions([Name-Outs0|Xs], [Name-Outs|Ys]) :-
+	new_array(A),
+	melt_list(Outs0, Outs, A),
+	melt_additions(Xs, Ys).
+
+melt_list([], [], _).
+melt_list([X-V|Xs], [Y-W|Ys], A0) :-
+	melt1(X, Y, A0, A1),
+	melt2(V, W, A1, A),
+	melt_list(Xs, Ys, A).
+
+melt1(X, Y, A0, A) :-
+	(
+	    X = '$VAR'(N)
+	->
+	    (
+		aref(N, A0, v(XV))
+	    ->
+	        Y = XV,
+		A = A0
+	    ;
+	        aset(N, A0, v(XV), A),
+		Y = XV
+	    )
+	;
+	    Y = X,
+	    A = A0
+	).
+
+melt2(p(I, X0, Y0), p(I, X, Y), A0, A) :-
+	melt1(X0, X, A0, A1),
+	melt1(Y0, Y, A1, A).
+melt2(dia(I, X0), dia(I, X), A0, A) :-
+	melt1(X0, X, A0, A).
+
+match(Ins, Outs, All, Name) :-
+	match1(Ins, All),
+	\+ match1(Outs, All),
+	\+ \+ (numbervars(Outs, 0, _),
+	       format(log, '   ~w ->[~w]~n       ~w~n', [Ins, Name, Outs])).
+
+match1([], _).
+
+match1([X-Y|Xs], C) :-
+	btree_member(C, X, R),
+	member(Y, R), % multiple matches possible here!
+	match1(Xs, C).
+
+add_outs([], C, C, New, New, N, N, _, Mp, Mp,
+             YV, YV, VY, VY, Ct, Ct).
+add_outs([X-Y|Zs], C0, C, New0, New, N0, N, M, Mp0, Mp,
+             YV0, YV, VY0, VY, Ct0, Ct) :-
+	instantiate_vars(Y, X, N0, N1, M, Mp0, Mp1, YV0, YV1, VY0, VY1),
+    (
+	btree_get_replace(C0, X, List, YList, C1)
+    ->
+	ord_insert(List, Y, YList),
+	(
+	    YList == List
+	->
+	    New1 = New0
+	;
+	    add_new_item(X, New0, Y, New1),
+	    format(log, '~p~n', [X-Y])
+	)
+    ;
+	btree_put(C0, X, [Y], C1),
+	add_new_item(X, New0, Y, New1),
+	format(log, '~p~n', [X-Y])
+    ),
+	Ct1 is Ct0+1,
+	add_outs(Zs, C1, C, New1, New, N1, N, M, Mp1, Mp,
+                     YV1, YV, VY1, VY, Ct1, Ct).
+
+instantiate_vars(p(I, A, B), P, N0, N, M, Mp0, Mp, YV0, YV, VY0, VY) :-
+	instantiate_vars2(A, I, P, N0, N1, M, Mp0, Mp1,
+                             YV0, YV1, VY0, VY1),
+	instantiate_vars2(B, I, P, N1, N,  M, Mp1, Mp ,
+                             YV1, YV , VY1, VY).
+instantiate_vars(dia(I, A), P, N0, N, M, Mp0, Mp, YV0, YV, VY0, VY) :-
+	instantiate_vars1(A, I, P, N0, N, M, Mp0, Mp,
+                             YV0, YV, VY0, VY).
+
+instantiate_vars2(A, I, P, N0, N, M, Mp0, Mp, YV0, YV, VY0, VY) :-
+    (
+	var(A)
+    ->
+	btree_remove(VY0, A, YA, VY1),
+	(
+	    btree_get(YV0, b(P,I,YA), A)
+	->
+	    N = N0,
+	    Mp = Mp0,
+	    YV = YV0,
+	    VY = VY1
+	;
+	    A = N0,
+	    N is N0+1,
+	    aset(N0, Mp0, M, Mp),
+	    btree_put(YV0, b(P,I,YA), N0, YV),
+	    btree_put(VY1, N0, YA, VY)
+	)
+    ;
+	N = N0,
+	YV = YV0,
+	VY = VY0,
+	Mp = Mp0
+    ).
+
+instantiate_vars1(A, I, P, N0, N, M, Mp0, Mp, YV0, YV, VY0, VY) :-
+    (
+	var(A)
+    ->
+	btree_remove(VY0, A, YA, VY1),
+	(
+	    btree_get(YV0, u(P,I), A)
+	->
+	    N = N0,
+	    Mp = Mp0,
+	    YV = YV0,
+	    VY = VY1
+	;
+	    A = N0,
+	    N is N0+1,
+	    aset(N0, Mp0, M, Mp),
+	    btree_put(YV0, u(P,I), N0, YV),
+	    btree_put(VY1, N0, YA, VY)
+	)
+    ;
+	N = N0,
+	YV = YV0,
+	VY = VY0,
+	Mp = Mp0
+    ).    
+
+add_new_item(X, New0, Y, New) :-
+    ( 
+	btree_get(New0, X, List),
+	\+ ord_member(Y, List) ->
+	ord_insert(List, Y, YList),
+	btree_put(New0, X, YList, New)
+    ;
+	btree_put(New0, X, [Y], New)
+    ).
+
+var_leaves(p(_, A, B), List) :-
+	(var(B) ->
+	    List0 = [B]
+	;
+	    List0 = []
+	),
+	(var(A) ->
+	    List = [A|List0]
+	;
+	    List = List0
+	).
+
+var_leaves(dia(_, A), List) :-
+	(var(A) ->
+	    List = [A]
+	;
+	    List = []
+	).
+
+% conversion(+InputLinks,?OutputLinks)
+%
+% a conversion specifies which OutputLinks it can add given that
+% InputLinks are part of the current component.
+
+% = contract(+Pars, +Components, ?Leaves, ?Root)
+%
+% contracts the par links in Pars in combination with the tensor
+% links in Components.
+% after every contraction expand is called again.
+% prints a message when this succeeds. Leaves and Root are only
+% needed for this message.
+%
+% TODO organize par links in a partial order and select best from
+%      minimal items.
+% TODO implement `consecutive' par links, performing multiple
+%      contractions at the same time if no new material is added to
+%      the component.
+
+contract([], [], String, _, Btree0, N0, _ORoot, Leaves,
+             Mp0, Mp, Ct0, Ct, Gn0, Gn, Dot0, Formula, Sem) :-
+	portray_btree(Btree0, log),
+	(
+	    Btree0 = tree(Root, Cmp0, AVL, empty, empty),
+	    Btree = tree(Root, cmp(empty, Cmp1), AVL, empty, empty)
+	;
+	    Btree0 = black(Root, Cmp0, empty, empty),
+	    Btree = black(Root, cmp(empty, Cmp1), empty, empty)
+	;
+	    Btree0 = two(Root, Cmp0, empty, empty),
+	    Btree = two(Root, cmp(empty, Cmp1), empty, empty)
+	),
+	format(log, '=== >~w< ===~n', [Root]),
+	expand_component(Cmp0, Cmp1, N0, N, Root,
+                               Mp0, Mp, Ct0, Ct, Gn0, Gn),
+    (   
+	cmp(empty,Cmp1) \== Cmp0
+    ->
+	rename_file('tmp.dot', 'linking.dot'),
+	portray_graph([], [], Btree, String,
+                      Root, Leaves, N, Mp)
+    ;
+	true
+    ),
+	external_component(Leaves, Root, Cmp1, empty, Cmp),
+    (   
+	cmp(empty,Cmp) \== Cmp1
+    ->
+	portray_graph([], [], two(Root, cmp(empty, Cmp), empty, empty), String,
+                      Root, Leaves, N, Mp)
+    ;
+	true
+    ),
+%    (
+%        auto_expand(AutoExpansion)
+%    ->
+%        
+%        auto_expand(AutoExpansion, Root, Cmp, AECmp, Leaves, Yields),
+%       (
+%	    AECmp \== Cmp
+%       ->
+%	    portray_graph([], [], two(Root, cmp(empty, AECmp), empty, empty), String,
+%                         Root, Leaves, N, Mp)
+%       ;
+%	    true
+%       )
+%     
+%    ;
+%	setof(Yield, simple_yield(Root, Cmp, Yield, []), Yields)
+%    ),
+    setof(Yield, simple_yield(Root, Cmp, Yield, []), Yields),
+    (
+	find_input_yield(Yields, Leaves)
+    ->
+	increase_global_counter('$SOLUTION', Solution),
+        Text = 'Solution Found',
+        Der = ''
+    ;
+	increase_global_counter('$VIOL_ORDER'),
+        Text = 'Word Order Mismatch',
+        Der = '*\\ '
+    ),
+        format('= Solution ~w =~n', [Solution]),
+        format(log, '= Solution ~w =~n', [Solution]),
+        format(sem_pl, '% = Solution ~w =~n', [Solution]),
+	format('~n~p!: ~p~n', [Text, Root]),
+	format('Leaves: ~p~n', [Leaves]),
+	format(log,'Final Component: ~n', []),
+	portray_btree(Cmp, log),
+	format(log,'Yields: ~n', []),
+	portray_list(Yields, log),
+	format('Yields: ~n', []),	
+	portray_list(Yields),
+	format('Vertices    : ~w~n', [N]),
+	btree_foldl(Cmp, user:count_items, 0, Items),
+	format('Yield items : ~w~n', [Items]),
+	numbervars(Sem, 0, _),
+	reduce_semantics(Sem, RSem),
+	format('Semantics   : ~p~n', [Sem]),
+	format('Reduced Sem : ~p~n', [RSem]),
+	format(log, '~n% = Semantics~2n ~W~2n', [Sem,[numbervars(true),quoted(true)]]),
+	format(log, '% = Reduced Semantics~2n~W~2n', [RSem,[numbervars(true),quoted(true)]]),
+	format(sem_pl, '~n% = Semantics~2n ~W.~2n', [Sem,[numbervars(true),quoted(true)]]),
+	format(sem_pl, '% = Reduced Semantics~2n~W.~2n', [RSem,[numbervars(true),quoted(true)]]),
+	format(previous_sem, '% = ~w. Reduced Semantics ~2nsemantics_memo(~w,~W).~2n', [Solution,Solution,RSem,[numbervars(true),quoted(true)]]),
+   (
+        display_unreduced_semantics(yes)
+   ->
+	format(sem, '% ~w before beta reduction~2n$$~n~w', [Solution,Der]),
+	latex_semantics(Sem, Formula, sem),
+	format(sem, '\\quad \\rightarrow_{\\beta}~n$$~n', []),
+	format(sem, '% ~w after beta reduction~2n$$~n', [Solution])
+   ;
+	format(sem, '% ~w semantics after beta reduction~2n$$~n~w', [Solution,Der])
+   ),
+	latex_semantics(RSem, Formula, sem),
+	format(sem, '~n$$~2n', []),
+	format(sem, '% ~w end~2n', [Solution]),
+    (
+	option_true(query)
+    ->
+	sem_to_prolog(Formula, RSem, Prolog),
+	format('Prolog Clauses :~n~@', [portray_list(Prolog)])
+    ;
+	true
+    ),
+	format('Edges added : ~w~n', [Ct]),
+	format('Generations : ~w~n', [Gn]),
+	'$DOTFILE'(Num),
+	format('Dot files   : {~w-~w}.dot~n', [Dot0, Num]),
+    	solution_dialog(Text).
+
+contract([Num0-Pars0|Ps0], Rest0, String, Avoid0, Ts0, N0,
+	      Rt0, Ls0, Mp0, Mp, Ct0, Ct, Gn0, Gn, Dot0, Formula, Sem) :-
+	btree_get_replace(Ts0, Num0, Cmp0, cmp(empty, Cmp2), Ts1),
+	copy_term(Ts1-Cmp2, DT-DC),
+	DC = Cmp1,
+	format(log, '=== >~w< ===~n', [Num0]),
+	expand_component(Cmp0, Cmp1, N0, N, Num0, Mp0, Mp1,
+                         Ct0, Ct1, Gn0, Gn1),
+    (  
+	cmp(empty, Cmp1) \== Cmp0
+    ->
+	portray_graph([Num0-Pars0|Ps0], Rest0, DT, String,
+                      Rt0, Ls0, N, Mp1)
+    ;
+	true
+    ),
+	/* careful here, responsibility of selecting the correct par
+           is given to the user */
+        user_select_par(Pars0, Par, Pars1),
+    (
+	apply_contraction(Par, V1, V2, Num0, Cmp1, Cmp2, Root, Mp1, Mp2)
+    ->
+	true
+    ;
+	increase_global_counter('$VIOL_CONTR'),
+	fail
+    ),
+    ( 
+	ord_select(Root, Avoid0, Avoid)
+    ->
+	true
+    ;
+	/* this should not happen */
+	format('Root: ~w ~w~n', [Root, Avoid0]),
+	Avoid = Avoid0
+    ),
+	add_remainder(Pars1, Rest0, Rest1),
+	replace(Ts1, V1, V2, Ts, Ps0, Ps1, Rest1, Rest2, Ls0, Ls, Rt0, Rt, Mp2, Mp3),
+	active_pars(Rest2, [], Active, Rest, Avoid, Mp3, Mp4),
+	merge_pars(Active, Ps1, Ps),
+	portray_graph(Ps, Rest, Ts, String,
+                      Rt, Ls, N, Mp4),
+	contract(Ps, Rest, String, Avoid, Ts, N, 
+                     Rt, Ls, Mp4, Mp, Ct1, Ct, Gn1, Gn, Dot0, Formula, Sem).
+
+
+apply_contraction(Par, V1, V2, Num0, Cmp0, Cmp, Root, Mp1, Mp2) :-
+	contraction(Par, X-Tensor, V1, V2, Num0, Num1, _LS),
+	active_root(Par, Root0),
+	ds_find(Mp1, Root0, Root, Mp2),
+    ( 
+	integer(X) ->
+	/* dr, dl, box case; we know the root X, but the new root Num
+	   may be uninstatiated until we find Tensor */
+	btree_remove(Cmp0, X, List, Cmp1),
+	setof(Num1, member(Tensor, List), [V2|Set]),
+	merge_vertices(Set, V2, [], Cmp1, Cmp2),
+	filter([V2], [V2], Cmp2, empty, Cmp)
+    ;
+	/* p, dia case; we don't know X, but the root will stay the
+	   same, so no filtering necessary */
+	setof(X, List^(btree_member(Cmp0, X, List),
+	               member(Tensor, List)) , [XV|Set]),
+	V1 = XV,
+        (
+	    Par = p(_,_,A,B)
+	->
+	    ds_find(Mp2, A, RA, _),
+	    initial_yields(Cmp0, RA, _, VY),
+	    erase_edges(Set, XV, Cmp0, Cmp1),
+	    filter_leaf(A, VY, Cmp1, Cmp2),
+	    filter_leaf(B, VY, Cmp2, Cmp)
+	;
+	    Par = dia(_,_,A)
+	->
+	    ds_find(Mp2, A, RA, _),
+	    initial_yields(Cmp0, RA, _, VY),
+            erase_edges(Set, XV, Cmp0, Cmp1),
+	    filter_leaf(A, VY, Cmp1, Cmp)
+	)
+      ).
+
+filter_leaf(L, VY, Cmp0, Cmp) :-
+	btree_keys(Cmp0, Keys),
+	filter_leaf1(Keys, Cmp0, Cmp, L, VY).
+
+filter_leaf1([], Cmp, Cmp, _, _).
+filter_leaf1([K|Ks], Cmp0, Cmp, L, VY) :-
+    (
+	filter_leaf2(K, VY, L),
+	btree_get_replace(Cmp0, K, V0, V, Cmp1)
+    ->
+	filter_leaf3(V0, L, V),
+	(
+	    V = []
+	->
+	    btree_delete(Cmp1, K, Cmp2),
+	    filter_leaf(K, VY, Cmp2, Cmp3)
+	;
+	    Cmp3 = Cmp1
+	)
+    ;
+	Cmp3 = Cmp0
+    ),
+	filter_leaf1(Ks, Cmp3, Cmp, L, VY).
+
+filter_leaf2(V, VY, L) :-
+	btree_get(VY, V, Cs),
+	btree_get(VY, L, Ds),
+	ord_intersect(Cs, Ds, Ds).
+
+filter_leaf3([], _, []).
+filter_leaf3([L|Ls0], K, Ls) :-
+    (
+	filter_leaf4(L, K)
+    ->
+	Ls = Ls1
+    ;
+	Ls = [L|Ls1]
+    ),
+	filter_leaf3(Ls0, K, Ls1).
+
+filter_leaf4(p(_,A,B), K) :-
+    (
+	A = K
+    ->
+	true
+    ;
+	B = K
+    ->
+	true
+    ;
+	fail
+    ).
+filter_leaf4(dia(_,K), K).
+
+
+% = remove copies of edges
+
+erase_edges([], V2, Cmp0, Cmp) :-
+	btree_remove(Cmp0, V2, _, Cmp).
+erase_edges([V|Vs], V2, Cmp0, Cmp) :-
+	btree_remove(Cmp0, V, _, Cmp1),
+	replace_component(Cmp1, V, V2, Cmp2),
+	erase_edges(Vs, V2, Cmp2, Cmp).
+
+% = contraction(+Par, ?Tensor, ?Root, ?Leaf, +OldRoot, ?NewRoot, -ErasedNodes)
+%
+% basic contractions, checks for strict identity of two vertices then
+% unifies the remaining vertices.
+% Returns the Leaf and Root to be unified for the new component
+
+contraction(p(I,A,B,C) , D-p(I,B,C), D, A, N, N, [B,C]).
+contraction(dr(I,A,B,C), A-p(I,E,C), B, E, _, E, [A,C]).
+contraction(dl(I,A,B,C), A-p(I,B,F), C, F, _, F, [A,B]).
+contraction(dia(I,A,B) , C-dia(I,B), C, A, N, N, [B]).
+contraction(box(I,A,B) , A-dia(I,D), B, D, _, D, [A]).
+
+% = merge_vertices(+List, +Vertex, +Edges, +CmpIn, -CmpOut)
+%
+% all vertices from List are deleted from CmpIn and their edges
+% combined in a single Vertex in CmpOut
+
+merge_vertices([], F, L0, Cmp0, Cmp) :-
+      (
+	  btree_remove(Cmp0, F, L1, Cmp1)
+      ->
+	  ord_union(L0, L1, L)
+      ;
+	  L = L0,
+	  Cmp1 = Cmp0
+      ),
+      (
+	  L = []
+      ->
+	  Cmp = Cmp1
+      ;
+	  btree_put(Cmp1, F, L, Cmp)
+      ).
+merge_vertices([X|Xs], F, L0, Cmp0, Cmp) :-
+      (
+	  btree_remove(Cmp0, X, L1, Cmp1)
+      ->
+	  ord_union(L0, L1, L2)
+      ;
+	  Cmp1 = Cmp0,
+	  L2 = L0
+      ),
+	replace_component(Cmp1, X, F, Cmp2),
+	merge_vertices(Xs, F, L2, Cmp2, Cmp).
+
+% = external_component(+Leaves, +Root, +C0, -C)
+%
+% true if C is the part of component C0 containing only external modes.
+% fails if there is no way to reach the Root node from the Leaves
+% using only external modes. 
+
+external_component(Leaves0, Root, Orig, C0, C) :-
+	strip_values(Leaves0, Leaves1),
+	sort(Leaves1, Leaves),
+    (
+	Leaves = [Root]
+    ->
+	C = empty
+    ;
+	external_component1([Root], Leaves, [], Orig, C0, C)
+    ).
+
+external_component1([], _, P, _, C0, C) :-
+	add_pending(P, C0, C).
+external_component1([V|Vs], Leaves, Pending0, Orig, C0, C) :-
+	btree_get(Orig, V, Es0),
+	filter_external(Es0, Es),
+	external_daughters(Es, [], Ds0),
+	ord_subtract(Ds0, Leaves, Ds),
+    (
+	Ds = []
+    ->
+	btree_put(C0, V, Es, C1),
+	Stack = Vs,
+	Pending = Pending0
+    ;
+	C1 = C0,
+	append(Ds, Vs, Stack),
+	ord_key_insert(Pending0, V, Es, Pending)
+    ),
+	external_component1(Stack, Leaves, Pending, Orig, C1, C).
+
+add_pending([], C, C).
+add_pending([K-V|Ps], C0, C) :-
+	btree_insert(C0, K, V, C1),
+	add_pending(Ps, C1, C).
+
+external_daughters([], Ds, Ds).
+external_daughters([E|Es], Ds0, Ds) :-
+	external_daughters1(E, Ds0, Ds1),
+	external_daughters(Es, Ds1, Ds).
+
+external_daughters1(dia(I, A), Ds0, Ds) :-
+    (
+	external_dia(I)
+    ->
+	ord_insert(Ds0, A, Ds)
+    ;
+	Ds = Ds0
+    ).
+external_daughters1(p(I, A, B), Ds0, Ds) :-
+    (
+	external(I)
+    ->
+	ord_insert(Ds0, A, Ds1),
+	ord_insert(Ds1, B, Ds)
+    ;
+	Ds = Ds0
+    ).
+
+reachable(K, Vs, Reach0, Reach) :-
+    (
+	member(V, Vs),
+	reachable1(V, Reach0)
+    ->
+	ord_insert(Reach0, K, Reach)
+    ;
+	Reach = Reach0
+    ).
+
+reachable1(p(I,A,B), Reach) :-
+	external(I),
+	ord_member(A, Reach),
+	ord_member(B, Reach).
+reachable1(dia(I,A), Reach) :-
+	external_dia(I),
+	ord_member(A, Reach).
+
+filter_external([], []).
+filter_external([V|Vs], Ws0) :-
+	filter_external1(V, Ws0, Ws),
+	filter_external(Vs, Ws).
+
+filter_external1(dia(I,A), Ws0, Ws) :-
+    (
+	external_dia(I)
+    ->
+	Ws0 = [dia(I,A)|Ws]
+    ;
+	Ws0 = Ws
+    ).
+filter_external1(p(I,A,B), Ws0, Ws) :-
+    (
+	external(I)
+    ->
+	Ws0 = [p(I,A,B)|Ws]
+    ;
+	Ws0 = Ws
+    ).
+
+node_component_daughters(Node, Component, Daughters) :-
+	btree_get(Component, Node, List),
+	list_daughters(List, [], Daughters).
+
+list_daughters([], Ds, Ds).
+list_daughters([T|Ts], Ds0, Ds) :-
+	tensor_daughters(T, Ds0, Ds1),
+	list_daughters(Ts, Ds1, Ds).
+
+tensor_daughters(dia(_, A), Ds0, Ds) :-
+	ord_insert(Ds0, A, Ds).
+tensor_daughters(p(_, A, B), Ds0, Ds) :-
+	ord_insert(Ds0, A, Ds1),
+	ord_insert(Ds1, B, Ds).
+
+% = simple_yield(+Root, +Component, ?Words)
+%
+% true if Words is a possible yield of the tree with root Root in
+% Component.
+
+simple_yield(Root, Component, Words) :-
+	simple_yield(Root, Component, Words, []).
+
+simple_yield(Root, Cmp, Ws0, Ws) :-
+    (
+	btree_get(Cmp, Root, List)
+    ->
+	member(Item, List),
+	simple_yield1(Item, Cmp, Ws0, Ws)
+    ;
+	Ws0 = [Root|Ws]
+    ).
+
+simple_yield1(dia(_,A), Cmp, Ws0, Ws) :-
+	(
+	    btree_get(Cmp, A, NextAs)
+	->
+	    member(NextA, NextAs),
+	    simple_yield1(NextA, Cmp, Ws0, Ws)
+	;
+	    Ws0 = [A|Ws]
+	).
+simple_yield1(p(_,A,B), Cmp, Ws0, Ws) :-
+	(
+	    btree_get(Cmp, A, NextAs)
+	->
+	    member(NextA, NextAs),
+	    simple_yield1(NextA, Cmp, Ws0, Ws1)
+	;
+	    Ws0 = [A|Ws1]
+	),
+	(
+	    btree_get(Cmp, B, NextBs)
+	->
+	    member(NextB, NextBs),
+	    simple_yield1(NextB, Cmp, Ws1, Ws)
+	;
+	    Ws1 = [B|Ws]
+	).
+
+find_input_yield([Y|Ys], Leaves) :-
+    (
+	find_input_yield1(Y, Leaves)
+    ->
+        true
+    ;
+	find_input_yield(Ys, Leaves)
+    ).
+
+find_input_yield1([], []).
+find_input_yield1([N|Ns], [N-_|Ms]) :-
+	find_input_yield1(Ns, Ms).
+	
+add_remainder([]    , Ps, Ps).
+add_remainder([X|Xs], Ps, [X|Ps0]) :-
+	add_remainder(Xs, Ps, Ps0).
+
+merge_pars([], Ps, Ps).
+merge_pars([N-Xs|Rest], Ps0, Ps) :-
+       (
+	   select(N-Ys, Ps0, Ps1)
+       ->
+	   append(Xs, Ys, Zs),
+	   merge_pars(Rest, [N-Zs|Ps1], Ps)
+       ;
+	   merge_pars(Rest, [N-Xs|Ps0], Ps)
+       ).
+
+active_leaves(p(_,_,B,C) , [B,C]).
+active_leaves(dr(_,A,_,C), [A,C]).
+active_leaves(dl(_,A,B,_), [A,B]).
+active_leaves(dia(_,_,B) , [B]).
+active_leaves(box(_,A,_) , [A]).
+
+active_root(p(_,A,_,_) , A).
+active_root(dr(_,_,B,_), B).
+active_root(dl(_,_,_,C), C).
+active_root(dia(_,A,_) , A).
+active_root(box(_,_,B),  B).
+
+% = all_leaves_components(+Leaves, -Components, +Map)
+%
+% Searches for every leaf number in Leaves the corresponding component
+% number in Map and returns the result as the ordered set Components.
+% Note that if Components is a singleton set then the par link of
+% leaves is active.
+
+all_leaves_components(Xs, Cs, Mp0, Mp) :-
+	all_leaves_components(Xs, [], Cs, Mp0, Mp).
+
+all_leaves_components([], Cs, Cs, Mp, Mp).
+all_leaves_components([X|Xs], Cs0, Cs, Mp0, Mp) :-
+	ds_find(Mp0, X, C, Mp1),
+	ord_insert(Cs0, C, Cs1),
+	all_leaves_components(Xs, Cs1, Cs, Mp1, Mp).
+
+% = all_waiting_components(+PosAtoms, +NegAtoms, +Pars, -Components, +Map)
+%
+% Computes the ordered multiset of Components which are considered to
+% be waiting, either for an axiom link to be performed or because it
+% contains the root of a par link, either of which can potentially
+% enlarge a component.
+%
+% A component number wil occur once for each time it satifies one of
+% these conditions, eg. a component containing a positive atomic
+% formula, a negative atomic formula and the root vertices of two par
+% links will occur 4 times in Components.
+
+all_waiting_components(PAs, NAs, Pars, C, Mp0, Mp) :-
+	all_atom_components(PAs, [], C0, Mp0, Mp1),
+	all_atom_components(NAs, C0, C1, Mp1, Mp2),
+	all_par_roots(Pars, C1, C, Mp2, Mp).
+
+% = all_atom_components(+Atoms, +Cs0, -Cs, Map)
+%
+% Uses Map to find the component number of each atom in Atoms then
+% adds this number to the ordered multiset Cs0 to produce Cs.
+
+all_atom_components([], C, C, Mp, Mp).
+all_atom_components([_-at(N,_,_,_,_,_)|As], C0, C, Mp0, Mp) :-
+	ds_find(Mp0, N, NC, Mp1),
+	ord_dup_insert(C0, NC, C1),
+	all_atom_components(As, C1, C, Mp1, Mp).
+
+% = all_par_roots(+Pars, +Cs0, -Cs, Map)
+%
+% Uses Map to find the component number of the root of every par link
+% in Pars then adds this number to the ordered multiset Cs0 to produce
+% Cs.
+
+all_par_roots([], Roots, Roots, Mp, Mp).
+all_par_roots([P|Ps], Roots0, Roots, Mp0, Mp) :-
+	active_root(P, R),
+	ds_find(Mp0, R, C, Mp1),
+	ord_dup_insert(Roots0, C, Roots1),
+	all_par_roots(Ps, Roots1, Roots, Mp1, Mp).
+
+% = active_pars(+Pars, -ActivePars, -WaitingPars, +Avoid, +Map)
+%
+% Splits the set of Pars into a set of ActivePars and WaitingPars, the
+% former of which is a list containing C-ParList pairs of components
+% and the contractable par links attached to them.
+
+active_pars([], Pars, Pars, [], _, Mp, Mp).
+active_pars([P|Ps], Pars0, Pars, Rest0, Avoid, Mp0, Mp) :-
+	  active_leaves(P, Leaves),
+	  all_leaves_components(Leaves, Cs, Mp0, Mp1),
+      (
+	  Cs = [Num],
+	  \+ ord_member(Num, Avoid)
+      ->  
+	  add_par(Pars0, Num, P, Pars1),
+          Rest0 = Rest
+      ;
+	  Pars1 = Pars0,
+          Rest0 = [P|Rest]
+      ),
+	active_pars(Ps, Pars1, Pars, Rest, Avoid, Mp1, Mp).
+
+add_par(Pars0, Num, P, Pars) :-
+      (
+	  select(Num-List, Pars0, Pars1)
+      ->
+	  Pars = [Num-[P|List]|Pars1]
+      ;
+	  Pars = [Num-[P]|Pars0]
+      ).
+
+% = filter(+Filter, +Component, -NewComponent)
+%
+% remove items of Filter from Component to give NewComponent.
+%
+% !!TODO!! modify in such a way that all unreachable items are removed from
+%          the component
+
+filter([], _, _, Cp, Cp).
+filter([A|As0], Visited0, OldCp, Cp0, Cp) :-
+      (
+	  btree_get(OldCp, A, Rest)
+      ->
+	  add_items(Rest, As0, As1),
+	  ord_insert(Visited0, A, Visited),
+	  ord_subtract(As1, Visited, As2),
+	  btree_put(Cp0, A, Rest, Cp1),
+	  filter(As2, Visited, OldCp, Cp1, Cp)
+      ;
+	  filter(As0, Visited0, OldCp, Cp0, Cp)
+      ).
+
+add_items([], As, As).
+add_items([T|Ts], As0, As) :-
+	add_item(T, As0, As1),
+	add_items(Ts, As1, As).
+
+add_item(p(_,A,B), As0, As) :-
+	ord_insert(As0, A, As1),
+	ord_insert(As1, B, As).
+add_item(dia(_,A), As0, As) :-
+	ord_insert(As0, A, As).
+
+select_all([], _, Old, Old, As, As, Cp, Cp).
+select_all([O|Old0], A, Old1, Old, As0, As, Cp0, Cp) :-
+	select_item(O, A, Old1, Old2, As0, As1, Cp0, Cp1),
+	select_all(Old0, A, Old2, Old, As1, As, Cp1, Cp).
+
+select_item(p(I,A,B,C), D, Old0, Old, As0, As, Cp0, Cp) :-
+	(
+	    A = D
+	->
+	    Cp = [p(I,A,B,C)|Cp0],
+	    Old = Old0,
+	    As = [B,C|As0]
+	;
+	    Cp = Cp0,
+	    Old = [p(I,A,B,C)|Old0],
+	    As = As0
+	).
+select_item(dia(I,A,B), D, Old0, Old, As0, As, Cp0, Cp) :-
+	(
+	    A = D
+	->
+	    Cp = [dia(I,A,B)|Cp0],
+	    Old = Old0,
+	    As = [B|As0]
+	;
+	    Cp = Cp0,
+	    Old = [dia(I,A,B)|Old0],
+	    As = As0
+	).
+
+% = replace/8
+%
+% this is the case used for axiom connections and is slightly more
+% simple than the contraction case. We can for example, assume that
+% the New and All set of the component are identical, at least until
+% we implement some early application of the contractions.
+
+replace(Cs0, X, Y, Cs, Pr0, Pr, Mp0, Mp) :-
+	ds_find(Mp0, X, RX, Mp1),
+	ds_find(Mp1, Y, RY, Mp2),
+      ( 
+	  Y = RY ->
+	  U = RY,
+	  Z = RX
+      ;
+	  U = RX,
+	  Z = RY
+      ),
+	btree_remove(Cs0, U, cmp(V2,V2), Cs1),
+	btree_get_replace(Cs1, Z, cmp(V1,V1), cmp(V,V), Cs),
+        btree_merge(V1, V2, V3),
+	replace_component(V3, Y, X, V),
+	ds_link(Mp2, U, Z, Mp),
+	replace_pars(Pr0, Y, X, Pr).
+
+replace(Cs0, X, Y, Cs, P0, P, Pr0, Pr, Ls0, Ls, Rt0, Rt, Mp0, Mp) :-
+	ds_find(Mp0, X, RX, Mp1),
+	ds_find(Mp1, Y, RY, Mp2),
+      ( 
+	  Y = RY ->
+	  /* product or diamond case */
+	  X1 = Y,
+	  Y1 = X,
+	  U = RY,
+	  Z = RX
+      ;
+	  /* dl, dr or box case */
+	  X1 = Y,
+	  Y1 = X,
+	  U = RY,
+	  Z = RX
+      ),
+	% Earlier versions erroneously merge the two new and old sets 
+        % of the components. However, this is incorrect as even when
+	% two fully expanded components are joined, their combinations
+	% might produce new structures. The current version regards
+	% the first component as new after each contraction. 20060217 RM 
+	btree_remove(Cs0, U, cmp(_V2,V6), Cs1),
+	btree_get_replace(Cs1, Z, cmp(V1,V5), cmp(V4,V8), Cs),
+        btree_merge(V1, V6, V3),
+	btree_merge(V5, V6, V7),
+	format(log, '  e(~w) := e(~w)~n', [X1,Y1]),
+	format(log, '  c(~w) := c(~w)~n', [RY,RX]),
+	ds_link(Mp2, RY, RX, Mp),
+	replace_component(V3, X1, Y1, V4),
+	replace_component(V7, X1, Y1, V8),
+	replace_keys(P0, U, Z, P1),
+	replace_keys(Ls0, X1, Y1, Ls),
+	replace_pars_list(P1, X1, Y1, P),
+	replace_pars(Pr0, X1, Y1, Pr),
+	replace_item(Rt0, X1, Y1, Rt).
+
+replace_keys([], _, _, []).
+replace_keys([N-Ps|Rest0], X, Y, [M-Ps|Rest]) :-
+	replace_item(N, X, Y, M),
+	replace_keys(Rest0, X, Y, Rest).
+
+replace_pars_list([], _, _, []).
+replace_pars_list([N-Ps|Rest0], X, Y, [M-Qs|Rest]) :-
+	replace_item(N, X, Y, M),
+	replace_pars(Ps, X, Y, Qs),
+	replace_pars_list(Rest0, X, Y, Rest).
+
+% = replace_component(+CmpA, +X, +Y, -CmpB)
+%
+% replace Y for X in CmpA, producing CmpB
+% if an item X exists in CmpA, remove it and insert an item Y with the
+% same value, otherwise do nothing.
+% continue with calling replace_tensor_list on all values of CmpA,
+% using structural induction, producing CmpB.
+
+replace_component(C0, X, Y, C) :-
+      (
+	  btree_remove(C0, X, V1, C1)
+      ->
+	 ( 
+	     btree_get_replace(C1, Y, V2, V3, C2)
+         ->
+	     ord_union(V1, V2, V3)
+	 ;
+	     format(log, '~w is new...~n', [Y]),
+	     btree_put(C1, Y, V1, C2)
+         )
+      ;
+	  C2 = C0
+      ),
+	replace_component1(C2, X, Y, C).
+
+replace_component1(empty, _, _, empty).
+replace_component1(tree(A, B0, C, D0, E0), X, Y, tree(A, B, C, D, E)) :-
+	replace_tensor_list(B0, X, Y, B),
+	replace_component1(D0, X, Y, D),
+	replace_component1(E0, X, Y, E).
+replace_component1(red(A, B0, D0, E0), X, Y, red(A, B, D, E)) :-
+	replace_tensor_list(B0, X, Y, B),
+	replace_component1(D0, X, Y, D),
+	replace_component1(E0, X, Y, E).
+replace_component1(black(A, B0, D0, E0), X, Y, black(A, B, D, E)) :-
+	replace_tensor_list(B0, X, Y, B),
+	replace_component1(D0, X, Y, D),
+	replace_component1(E0, X, Y, E).
+replace_component1(two(A, B0, D0, E0), X, Y, two(A, B, D, E)) :-
+	replace_tensor_list(B0, X, Y, B),
+	replace_component1(D0, X, Y, D),
+	replace_component1(E0, X, Y, E).
+replace_component1(three(A, B0, C, D0, E0, F0, G0), X, Y,
+                   three(A, B,  C, D,  E,  F,  G)) :-
+	replace_tensor_list(B0, X, Y, B),
+	replace_tensor_list(D0, X, Y, D),
+	replace_component1(E0, X, Y, E),
+	replace_component1(F0, X, Y, F),
+	replace_component1(G0, X, Y, G).
+replace_component1(four(A, B0, C, D0, E, F0, G0, H0, I0, J0), X, Y,
+                   four(A, B,  C, D,  E, F,  G,  H,  I,  J)) :-
+	replace_tensor_list(B0, X, Y, B),
+	replace_tensor_list(D0, X, Y, D),
+	replace_tensor_list(F0, X, Y, F),
+	replace_component1(G0, X, Y, G),
+	replace_component1(H0, X, Y, H),
+	replace_component1(I0, X, Y, I),
+	replace_component1(J0, X, Y, J).
+
+replace_tensor_list(Xs, A, B, Zs) :-
+	replace_tensor_list1(Xs, A, B, Vs, [], Ws),
+	ord_union(Vs, Ws, Zs).
+replace_tensor_list1([], _, _, [], Zs, Zs).
+replace_tensor_list1([X|Xs], A, B, Ys, Zs0, Zs) :-
+	replace2(X, A, B, Y),
+	( 
+	    X == Y 
+	->
+	    Ys = [X|Ys0],
+	    Zs1 = Zs0
+	;
+	    Ys = Ys0,
+	    ord_insert(Zs0, Y, Zs1)
+	),
+	replace_tensor_list1(Xs, A, B, Ys0, Zs1, Zs).
+
+replace2(p(I,A,B), C, D, p(I,E,F)) :-
+	(
+	    A = C
+	->
+	    E = D
+	;
+	    E = A
+	),
+	(
+	    B = C
+	->
+	    F = D
+	;
+	    F = B
+	).
+replace2(dia(I,A), B, C, dia(I,D)) :-
+	(
+	    A = B
+	->
+	    D = C
+	;
+	    D = A
+	).
+
+replace_pars([], _, _, []).
+replace_pars([X|Xs], A, B, [Y|Ys]) :-
+	replace1(X, A, B, Y),
+	replace_pars(Xs, A, B, Ys).
+
+replace1(p(I,A,B,C), D, E, p(I,F,G,H)) :-
+	(
+	    A=D 
+        -> 
+	    F=E,
+	    B=G,
+	    C=H
+	;
+	    A=F,
+	    (
+	        B=D
+            ->
+	        G=E,
+	        C=H
+	    ;   
+                B=G,
+	        ( 
+	            C=D 
+                ->
+	            H=E
+	        ;     
+	            H=C
+                )  
+            )
+         ).
+replace1(dl(I,A,B,C), D, E, dl(I,F,G,H)) :-
+	(
+	    A=D 
+        -> 
+	    F=E,
+	    B=G,
+	    C=H
+	;
+	    A=F,
+	    (
+	        B=D
+            ->
+	        G=E,
+	        C=H
+	    ;   
+                B=G,
+	        ( 
+	            C=D 
+                ->
+	            H=E
+	        ;     
+	            H=C
+                )  
+            )
+         ).
+replace1(dr(I,A,B,C), D, E, dr(I,F,G,H)) :-
+	(
+	    A=D 
+        -> 
+	    F=E,
+	    B=G,
+	    C=H
+	;
+	    A=F,
+	    (
+	        B=D
+            ->
+	        G=E,
+	        C=H
+	    ;   
+                B=G,
+	        ( 
+	            C=D 
+                ->
+	            H=E
+	        ;     
+	            H=C
+                )  
+            )
+         ).
+replace1(dia(I,A,B), C, D, dia(I,E,F)) :-
+	(
+	    A=C
+	->
+	    E=D,
+	    F=B
+	;
+	    A=E,
+	    (
+		B=C
+	    ->
+	        F=D
+	    ;
+	        F=B
+	    )
+	).
+replace1(box(I,A,B), C, D, box(I,E,F)) :-
+	(
+	    A=C
+	->
+	    E=D,
+	    F=B
+	;
+	    A=E,
+	    (
+		B=C
+	    ->
+	        F=D
+	    ;
+	        F=B
+	    )
+	).
+
+replace_item(A,B,C,D) :-
+	(
+	    A=B
+	->
+	    D=C
+	;
+	    D=A
+	).
+
+% This is hardly the optimal way of updating the array; a disjoint
+% set data structure would be far better here.
+
+update_array(Array0, X, Y, Array) :-
+	map_array(Array0, user:array_replace(X,Y), Array).
+
+array_replace(X,Y,A,B) :-
+    (
+	A = X
+    ->
+	B = Y
+    ;
+	B = A
+    ).
+
+% ===================================================================
+% =                    Formula Decomposition                        =
+% ===================================================================
+
+% = unfold(+ListOfF, +Formula, -N, -Leaves, -Neg, -Pos,
+%          -Comps, -Pars, -VCMap)
+%
+% decomposition of the formulas into an initial graph, computing some
+% additional information along the way.
+%
+% ListOfF is a list of antecedent formulas
+% Formula is a goal formula
+% N       is an integer which has not been used as a vertex before
+% Leaves  is a list of the leaves of the graph
+% Neg     is a list of negative atomic formulas with their vertex no.
+% Pos     is a list of positive atomic formulas with their vertex no.
+% Comps   is an AVL tree of Components, which are of the Btreeiate a
+%         Root with a pair cmp(New, Old) where both New and Old are
+%         AVL trees of edges. Each Component can be accessed by its root
+%         vertex. Each edge can be accessed by it root vertex.
+% Pars    is a list of par links
+% VCMap   is an array mapping every vertex in the graph to the vertex
+%         of the root of the component it occurs in.
+
+unfold(ListOfFormulas, Formula0, Sem, New, Root, Leaves, 
+                       Neg, Pos, CBtree, Ps, AMp) :-
+	formula_length(Formula0, Di0),
+	unfold_antecedent(ListOfFormulas, 1, Root, Leaves, 0, Right, Di0, _,
+                    Neg, Neg1, Pos, Pos1, Cs, Cs1, Ps, Ps1, Mp, Mp1),
+	add_first_order(Formula0, Formula1, 1, [0,Right]),
+	add_uni1(Formula1, Formula, UL, UL), 
+	unfold1(Formula, Sem, Root, New, Root, Top, 0, Di0, Neg1, [], Pos1, [],
+                C0, [], Cs1, [], Ps1, [], Mp1, []),
+	list_to_array(Mp, AMp),
+	list_to_btree(C0, C),
+	list_to_btree([Top-cmp(C,C)|Cs], CBtree).
+
+% unfold the antecedent, keeping track of the vertices of the leaves.
+
+unfold_antecedent([], X, X, [], Ri, Ri, Di, Di, Neg, Neg, Pos, Pos,
+	          Cs, Cs, Ps, Ps, Mp, Mp).
+unfold_antecedent([F0-Sem|Fs], X0, X, [X0-F|Xs], Ri0, Ri, Di0, Di, 
+	          NL0, NL, PL0, PL, [R-cmp(C,C)|Cs0], Cs, Ps0, Ps, Mp0, Mp) :-
+%	Ri1 is Ri0+1,
+	add_first_order(F0, F1, 0, [Ri0,Ri1]),
+	add_uni0(F1, F, UL, UL),
+	unfold0(F, Sem, X0, X1, X0, R, Di0, Di1, NL0, NL1, PL0, PL1,
+                   C0, [], Cs0, Cs1, Ps0, Ps1, Mp0, Mp1),
+	list_to_btree(C0, C),
+	unfold_antecedent(Fs, X1, X, Xs, Ri1, Ri, Di1, Di, NL1, NL, PL1, PL,
+	           Cs1, Cs, Ps1, Ps, Mp1, Mp).
+
+unfold0(lit(A,FV,UL0,UL), V, X0, X, R, R, Di0, Di, 
+        [A-at(X0,V,Di0,FV,UL0,UL)|NL], NL, PL, PL,
+	        C, C, Cs, Cs, Ps, Ps, [X0-R|Mp], Mp) :-
+	X is X0+1,
+	Di is Di0+1.
+
+unfold0(box(I,A), V, X0, X, _, R, Di0, Di, NL0, NL, PL0, PL,
+	          [X1-[dia(I,X0)]|C0], C, Cs0, Cs, Ps0, Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold0(A, dedia(V), X1, X, X1, R, Di0, Di, NL0, NL, PL0, PL,
+	           C0, C, Cs0, Cs, Ps0, Ps, Mp0, Mp).
+
+unfold0(dia(I,A), V, X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+                  C, C, [R1-cmp(D,D)|Cs0], Cs, [dia(I,X0,X1)|Ps0], Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold0(A, debox(V), X1, X, X1, R1, Di0, Di, NL0, NL, PL0, PL,
+	           D0, [], Cs0, Cs, Ps0, Ps, Mp0, Mp),
+	list_to_btree(D0, D).
+
+unfold0(dl(I,A,B), U, X0, X, _, R, Di0, Di, NL0, NL, PL0, PL,
+     	           [X2-[p(I,X1,X0)]|C0], C, Cs0, Cs, P0, P, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold1(A, V, X1, X2, _, R, Di0, Di1, NL0, NL1, PL0, PL1,
+                   C0, C1, Cs0, Cs1, P0, P1, Mp0, Mp1),
+	unfold0(B, appl(U, V), X2, X, X2, R, Di1, Di, NL1, NL, PL1, PL,
+	           C1, C, Cs1, Cs, P1, P, Mp1, Mp).
+
+unfold0(dr(I,B,A), U, X0, X, _, R, Di0, Di, NL0, NL, PL0, PL,
+	           [X1-[p(I,X0,X2)]|C0], C, Cs0, Cs, Ps0, Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold0(B, appl(U, V), X1, X2, X1, R, Di0, Di1, NL0, NL1, PL0, PL1,
+	           C0, C1, Cs0, Cs1, Ps0, Ps1, Mp0, Mp1),
+	unfold1(A, V, X2, X, _, R, Di1, Di, NL1, NL, PL1, PL,
+	           C1, C, Cs1, Cs, Ps1, Ps, Mp1, Mp).
+
+unfold0(p(I,A,B), V, X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+	          C, C, [R1-cmp(D,D),R3-cmp(E,E)|Cs0], Cs, [p(I,X0,X1,X2)|Ps0], Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold0(A, pi1(V), X1, X2, X1, R1, Di0, Di1, NL0, NL1, PL0, PL1,
+                   D0, [], Cs0, Cs1, Ps0, Ps1, Mp0, Mp1),
+	unfold0(B, pi2(V), X2, X, X2, R3, Di1, Di, NL1, NL, PL1, PL,
+                   E0, [], Cs1, Cs, Ps1, Ps, Mp1, Mp),
+	list_to_btree(D0, D),
+	list_to_btree(E0, E).
+
+% positive, succedent formulas.
+
+unfold1(lit(A,FV,UL0,UL), V, X0, X, R, R, Di0, Di, 
+        NL, NL, [A-at(X0,V,Di0,FV,UL0,UL)|PL], PL,
+        C, C, Cs, Cs, Ps, Ps, [X0-R|Mp], Mp) :-
+	X is X0+1,
+	Di is Di0+1.
+
+unfold1(box(I,A), conbox(V), X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+	          C, C, [R1-cmp(D,D)|Cs0], Cs, [box(I,X1,X0)|Ps0], Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold1(A, V, X1, X, X1, R1, Di0, Di, NL0, NL, PL0, PL,
+                   D0, [], Cs0, Cs, Ps0, Ps, Mp0, Mp),
+	list_to_btree(D0, D).
+
+unfold1(dia(I,A), condia(V), X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+	          [X0-[dia(I,X1)]|C0], C, Cs0, Cs, Ps0, Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold1(A, V, X1, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+                   C0, C, Cs0, Cs, Ps0, Ps, Mp0, Mp).
+
+unfold1(dl(I,A,B), lambda(Z, V), X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+	           C, C, [R1-cmp(D,D),R3-cmp(E,E)|Cs0], Cs, [dl(I,X1,X2,X0)|Ps0], Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold1(B, V, X1, X2, X1, R3, Di0, Di1, NL0, NL1, PL0, PL1,
+                   E0, [], Cs0, Cs1, Ps0, Ps1, Mp0, Mp1),
+	unfold0(A, Z, X2, X, X2, R1, Di1, Di, NL1, NL, PL1, PL,
+                   D0, [], Cs1, Cs, Ps1, Ps, Mp1, Mp),
+	list_to_btree(D0, D),
+	list_to_btree(E0, E).
+
+unfold1(dr(I,B,A), lambda(Z, V), X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+	           C, C, [R1-cmp(D,D),R3-cmp(E,E)|Cs0], Cs, [dr(I,X2,X0,X1)|Ps0], Ps, [X0-R|Mp0], Mp) :-
+	X1 is X0+1,
+	unfold0(A, Z, X1, X2, X1, R1, Di0, Di1, NL0, NL1, PL0, PL1,
+                   D0, [], Cs0, Cs1, Ps0, Ps1, Mp0, Mp1),
+	unfold1(B, V, X2, X, X2, R3, Di1, Di, NL1, NL, PL1, PL,
+                   E0, [], Cs1, Cs, Ps1, Ps, Mp1, Mp),
+	list_to_btree(D0, D),
+	list_to_btree(E0, E).
+
+unfold1(p(I,A,B), pair(U, V), X0, X, R, R, Di0, Di, NL0, NL, PL0, PL,
+	          [X0-[p(I,X2,X1)]|C0], C, Cs0, Cs, Ps0, Ps, [X0-R|Mp0], Mp) :-
+
+	X1 is X0+1,
+	unfold1(B, V, X1, X2,  R, R, Di0, Di1, NL0, NL1, PL0, PL1,
+                   C0, C1, Cs0, Cs1, Ps0, Ps1, Mp0, Mp1),
+	unfold1(A, U, X2, X, R, R, Di1, Di, NL1, NL, PL1, PL,
+                   C1, C, Cs1, Cs, Ps1, Ps, Mp1, Mp).
+
+% ===================================================================
+% =                    First Order Variables                        =
+% ===================================================================
+
+% hook predicates to implement adding first order variables to implement
+% planarity etc.
+% right now, planarity information is added for any modes declared as
+% continuous, but by adding custom_first_order declarations, it's
+% possible to do generalized quantifiers and extraction in the style
+% of Moot & Piazza (2001).
+
+add_first_order(dl(1,lit(s(Z)),lit(s(Z))), dl(1,lit(s, [X,Y,Z]), lit(s, [X,Y,Z])), _, [V, W]) :-
+	var(W),
+	!,
+	W = V.
+add_first_order(F0, F, P, [Y, Z]) :-
+	add_first_order1(F0, F, P, [Y, Z]),
+	!,
+    (
+        Y == Z
+    ->
+        true
+    ;
+        var(Y)
+    ->
+        true
+    ;
+        var(Z)
+    ->
+        Z is Y + 1
+    ;
+        true
+    ).
+
+add_first_order1(F0, F, P, [Y,Z]) :-
+	custom_first_order(F0, F, P, [Y,Z]),
+	!.
+add_first_order1(lit(A), lit(A,L), _, L).
+add_first_order1(dia(I,A0), dia(I,A), P, [Y,Z]) :-
+    (
+	continuous_dia(I)
+    ->
+	U = Y,
+	V = Z
+    ;
+	true
+    ),
+	add_first_order1(A0, A, P, [U,V]).
+add_first_order1(box(I,A0), box(I,A), P, [Y,Z]) :-
+    (
+	continuous_dia(I)
+    ->
+	U = Y,
+	V = Z
+    ;
+	true
+    ),
+	add_first_order1(A0, A, P, [U,V]).
+add_first_order1(dl(I,A0,B0), dl(I,A,B), P, [Y,Z]) :-
+    (
+	continuous(I)
+    ->
+	gensym_pos(P, U),
+	V = Y,
+	X = U,
+	W = Z
+    ;
+	true
+    ),
+	flip(P, Q),
+	add_first_order1(A0, A, Q, [U,V]),
+	add_first_order1(B0, B, P, [X,W]).
+add_first_order1(dr(I,A0,B0), dr(I,A,B), P, [X,Y]) :-
+    (
+	continuous(I)
+    ->
+	gensym_pos(P, W),
+	V = Y,
+	X = U,
+	W = Z
+    ;
+	true
+    ),
+	flip(P, Q),
+	add_first_order1(A0, A, P, [U,Z]),
+	add_first_order1(B0, B, Q, [V,W]).
+add_first_order1(p(I,A0,B0), p(I,A,B), P, [X,W]) :-
+    (
+	continuous(I)
+    ->
+	gensym_neg(P, V),
+	V = Y,
+	X = U,
+	W = Z
+    ;
+	true
+    ),
+	add_first_order1(A0, A, P, [U,V]),
+	add_first_order1(B0, B, P, [Y,Z]).
+
+% = gensym_pos(+Polarity, -Variable/Constant)
+
+gensym_pos(0, _).
+gensym_pos(1, P) :-
+	gensym(p, P).
+
+gensym_neg(0, P) :-
+	gensym(p, P).
+gensym_neg(1, _).
+
+
+flip(0, 1).
+flip(1, 0).
+
+% T = All, U = TailVariable, never bound for recursive calls
+
+add_uni0(lit(A,L), lit(A,L,T,U), T, U) :-
+	\+ \+ ( U = [],
+	        format(log, '~w-:~w~n', [A, T])).
+add_uni0(dia(I,A0), dia(I,A), T, U0) :-
+    (
+	inert_dia(I)
+    ->
+	U0 = [l(I)|U1]
+    ;
+	U0 = U1
+    ),
+	add_uni0(A0, A, T, U1).
+add_uni0(box(I,A0), box(I,A), T, U0) :-
+    (
+	inert_dia(I)
+    ->
+	U0 = [m(I)|U1]
+    ;
+	U0 = U1
+    ),
+	add_uni0(A0, A, T, U1).
+add_uni0(dl(I,A0,B0), dl(I,A,B), T, U0) :-
+    (
+	inert(I)
+    ->
+	U0 = [m2(I)|U1],
+	V0 = [m1(I)|V1]
+    ;
+	U0 = U1,
+	V0 = V1
+    ),
+	add_uni1(A0, A, V0, V1),
+	add_uni0(B0, B, T, U1).
+add_uni0(dr(I,A0,B0), dr(I,A,B), T, U0) :-
+    (
+	inert(I)
+    ->
+	V0 = [m2(I)|V1],
+	U0 = [m1(I)|U1]
+    ;
+	U0 = U1,
+	V0 = V1
+    ),
+	add_uni0(A0, A, T, U1),
+	add_uni1(B0, B, V0, V1).
+add_uni0(p(I,A0,B0), p(I,A,B), _, _) :-
+	add_uni0(A0, A, L, L),
+	add_uni0(B0, B, M, M).
+
+% add_uni1(+Form, -Form, -V, ?All)
+
+add_uni1(lit(A,L), lit(A,L,U0,U), U0, U) :-
+	\+ \+ ( U = [],
+	        format(log, '~w+:~w~n', [A, U0])).
+add_uni1(dia(I,A0), dia(I,A), U0, U) :-
+    (
+	inert_dia(I)
+    ->
+	U1 = [m(I)|U0]
+    ;
+	U1 = U0
+    ),
+	add_uni1(A0, A, U1, U).
+add_uni1(box(I,A0), box(I,A), U0, U) :-
+    (
+	inert_dia(I)
+    ->
+	U1 = [r(I)|U0]
+    ;
+	U1 = U0
+    ),
+	add_uni1(A0, A, U1, U).
+add_uni1(dl(I,A0,B0), dl(I,A,B), U0, U) :-
+    (
+	inert(I)
+    ->
+	U1 = [r2(I)|U0],
+	L0 = [l1(I)|L]
+    ;
+	U1 = U0,
+        L0 = L
+    ),
+	add_uni0(A0, A, L0, L),
+	add_uni1(B0, B, U1, U).
+add_uni1(dr(I,A0,B0), dr(I,A,B), U0, U) :-
+    (
+	inert(I)
+    ->
+	U1 = [r1(I)|U0],
+	L0 = [l2(I)|L]
+    ;
+	U1 = U0,
+	L0 = L
+    ),
+	add_uni1(A0, A, U1, U),
+	add_uni0(B0, B, L0, L).
+add_uni1(p(I,A0,B0), p(I,A,B), _, _) :-
+	add_uni1(A0, A, U, U),
+	add_uni1(B0, B, V, V).
+
+% ===================================================================
+% =                              Basics                             =
+% ===================================================================
+
+atom_to_expr(Atom, Expr, Var) :-
+	catch(atom_to_term(Atom, Expr, Vars), syntax_error(_Err), fail),
+	length(Vars, L),
+	L < 2,
+    (
+	L =:= 1
+    ->
+	Vars = [_=Var]
+    ;
+	true
+    ).
+
+% formula_length(+Formula, ?Length)
+%
+% computes the number of atomic subformulas of a formula.
+
+formula_length(lit(_), 1).
+formula_length(dia(_, A), L) :-
+	formula_length(A, L).
+formula_length(box(_, A), L) :-
+	formula_length(A, L).
+formula_length(dl(_, A, B), L) :-
+	formula_length(A, LA),
+	formula_length(B, LB),
+	L is LA + LB.
+formula_length(dr(_, A, B), L) :-
+	formula_length(A, LA),
+	formula_length(B, LB),
+	L is LA + LB.
+formula_length(p(_, A, B), L) :-
+	formula_length(A, LA),
+	formula_length(B, LB),
+	L is LA + LB.
+
+count_items(_, V, I0, I) :-
+	length(V, I1),
+	I is I0+I1.
+
+% ===================================================================
+% =                   Output Log/Statistics                         =
+% ===================================================================
+
+% = new_output_file(+File, +Alias)
+%
+% opens File to be accessed by Alias
+% An old file of the same name, if it exists, is deleted.
+% If opening the file raises an exception (because of permissions)
+% a null stream is opened instead.
+
+new_output_file(File, Alias) :-
+        delete_file_if_exists(File),
+	catch(open(File, update, _, [alias(Alias),buffer(line)]),
+	      _, 
+	      open_null_stream(Alias)).
+
+delete_file_if_exists(File) :-
+    (
+        exists_file(File),
+	access_file(File, write)
+    ->
+	delete_file(File)
+    ;
+	true
+    ).
+
+log_sequent_properties(List) :-
+	max_order(List, Order),
+	total_degree(List, UD, BD, Disco),
+	total_atoms(List, Atoms),
+	format('~n===================================~n', []),
+	format('=       Sequent Properties        =~n', []),
+	format('===================================~2n', []),
+	format('Maximum Order     :    ~w~n', [Order]),
+	format('Total Disco  (B)  :    ~w~n', [Disco]),
+	format('Total Degree (B)  :    ~w~n', [BD]),
+	format('Total Degree (U+B):    ~w~n', [UD]),
+	format('Total Atoms       :    ~w~2n', [Atoms]),
+	format(log, '~n===================================~n', []),
+	format(log, '=       Sequent Properties        =~n', []),
+	format(log, '===================================~2n', []),
+	format(log, 'Maximum Order     :    ~w~n', [Order]),
+	format(log, 'Total Disco  (B)  :    ~w~n', [Disco]),
+	format(log, 'Total Degree (B)  :    ~w~n', [BD]),
+	format(log, 'Total Degree (U+B):    ~w~n', [UD]),
+	format(log, 'Total Atoms       :    ~w~2n', [Atoms]).
+
+output_statistics :-
+	'$SOLUTION'(S),
+	'$AXIOMS'(Ax),
+	'$VIOL_TOT'(T),
+	'$VIOL_ACC'(A),
+	'$VIOL_CONTR'(C),
+	'$VIOL_ORDER'(O),
+        '$LOOKUP'(Lookup),
+	optimal_axioms(OptAx),
+	format('=== END OF LOOKUP ~w ===~2n', [Lookup]),
+	format('===================================~n', []),
+	format('=            Statistics           =~n', []),
+	format('===================================~2n', []),
+	format('Solutions             : ~w~2n', [S]),
+	format('Axiom links tried     : ~w~n', [Ax]),
+	format('Optimal axiom links   : ~w~2n', [OptAx]),
+	format('Totality Violations   : ~w~n', [T]),
+	format('ACC Violations        : ~w~n', [A]),
+	format('Contraction Violations: ~w~n', [C]),
+	format('Word Order Violations : ~w~2n', [O]),
+	format(log, '=== END OF LOOKUP ~w ===~2n', [Lookup]),
+	format(log, '===================================~n', []),
+	format(log, '=            Statistics           =~n', []),
+	format(log, '===================================~2n', []),
+	format(log, 'Solutions             : ~w~2n', [S]),
+	format(log, 'Axiom links tried     : ~w~n', [Ax]),
+	format(log, 'Optimal axiom links   : ~w~2n', [OptAx]),
+	format(log, 'Totality Violations   : ~w~n', [T]),
+	format(log, 'ACC Violations        : ~w~n', [A]),
+	format(log, 'Contraction Violations: ~w~n', [C]),
+	format(log, 'Word Order Violations : ~w~2n', [O]),
+    (
+	option_true(stats)
+    ->
+	gensym(parse, Name),
+	add_stats(@stats, Ax, OptAx, T, A, C, O, Name),
+	send(@statistics, fit)
+    ;
+	true
+    ).
+
+optimal_axioms(OptAx) :-
+	findall(L, '$AXIOM_SOL'(L), List),
+	length(List, Len),
+	List = [Sol1|_Rest],
+	length(Sol1, AxNum),
+	optimal_axioms(Len, List, AxNum, 0, OptAx).
+
+optimal_axioms(Len0, List, AxNum, OptAx0, OptAx) :-
+    (
+	Len0 = 1
+   ->
+	OptAx is OptAx0 + AxNum
+    ;
+	Len0 > 1,
+	List = [A, B|Rest],
+	/* count the number of shared axiom links */
+	ord_symdiff(A, B, C),
+	strip_values(C, D),
+	sort(D, E),
+	length(E, LenE),
+	OptAx1 is OptAx0 + LenE,
+	Len1 is Len0 - 1,
+	optimal_axioms(Len1, [B|Rest], AxNum, OptAx1, OptAx)
+    ).
+
+reset_global_counters :-
+	retractall('$SOLUTION'(_)),
+	retractall('$LOOKUP'(_)),
+	retractall('$AXIOMS'(_)),
+	retractall('$AXIOM_SOL'(_)),
+	retractall('$AXIOM_LIST'(_)),
+	retractall('$VIOL_ACC'(_)),
+	retractall('$VIOL_TOT'(_)),
+	retractall('$VIOL_CONTR'(_)),
+	retractall('$VIOL_ORDER'(_)),
+	retractall('$START_CPU'(_)),
+	retractall('$START_INF'(_)),
+	retractall(current_link_mode(_)),
+	assert('$SOLUTION'(0)),
+	assert('$LOOKUP'(0)),
+	assert('$AXIOMS'(0)),
+	assert('$AXIOM_LIST'([])),
+	assert('$AXIOM_SOL'([])),
+	assert('$VIOL_ACC'(0)),
+	assert('$VIOL_TOT'(0)),
+	assert('$VIOL_CONTR'(0)),
+	assert('$VIOL_ORDER'(0)),
+	statistics(cputime, CPU),
+	assert('$START_CPU'(CPU)),
+	statistics(inferences, INF),
+	assert('$START_INF'(INF)),
+	get_option(link_mode, LinkMode),
+	assert(current_link_mode(LinkMode)).
+
+increase_global_counter(Functor) :-
+	functor(Term, Functor, 1),
+	call(Functor, Num0),
+	Num is Num0 + 1,
+	retractall(Term),
+	arg(1, Term, Num),
+	assert(Term).
+
+increase_global_counter(Functor, Num) :-
+	functor(Term, Functor, 1),
+	call(Functor, Num0),
+	Num is Num0 + 1,
+	retractall(Term),
+	arg(1, Term, Num),
+	assert(Term).
+
+set_global_counter(Functor, Num) :-
+	functor(Term, Functor, 1),
+	retractall(Term),
+	arg(1, Term, Num),
+	assert(Term).
+
+insert_global_ordkeyset(Functor, Key, Data) :-
+	functor(Term, Functor, 1),
+    (
+	call(Functor, Set0)
+    ->
+	true
+    ;
+	Set0 = []
+    ),
+	ord_key_insert(Set0, Key, Data, Set),
+	retractall(Term),
+	arg(1, Term, Set),
+	assert(Term).
+
+copy_global_ordkeyset(Functor1, Functor2) :-
+	call(Functor1, A),
+	functor(Term1, Functor1, 1),
+	functor(Term2, Functor2, 1),
+	retractall(Term1),
+	arg(1, Term1, A),
+	arg(1, Term2, A),
+	assert(Term1),
+	assert(Term2).
+
+add_stats(BC, Axi, Opt, Tot, Acc, Con, Ord, Name) :-
+	send(BC, append, bar_group(Name, bar(axioms, Axi, blue), bar(optimal, Opt, green), bar(tot, Tot, yellow), bar(acc, Acc, orange), bar(con, Con, red), bar(ord, Ord, darkorchid))).
+
+% = order(+Formula, ?Int)
+%
+% true if Int is the order of Formula
+
+order(lit(_), 0).
+order(dia(_,A), N) :-
+	order(A, N).
+order(box(_,A), N) :-
+	order(A, N).
+order(dl(_,B,A), N) :-
+	order(A, N0),
+	order(B, N1),
+	N is max(N0, N1+1).
+order(dr(_,A,B), N) :-
+	order(A, N0),
+	order(B, N1),
+	N is max(N0, N1+1).
+order(p(_,A,B), N) :-
+	order(A, N0),
+	order(B, N1),
+	N is max(N0, N1).
+
+% = max_order(+List, ?Max)
+%
+% true if Max is the maximum order of the formulas in List
+
+max_order([H|T], Max) :-
+	order(H, Ord),
+	max_order(T, Ord, Max).
+
+max_order([], Max, Max).
+max_order([H|T], Max0, Max) :-
+	order(H, Ord),
+	Max1 is max(Ord,Max0),
+	max_order(T, Max1, Max).
+
+% = degree(+Formula, ?Int)
+%
+% true if Int is the degree of Formula
+
+degree(lit(_), M, M, N, N, D, D).
+degree(dia(_,A), M0, M, N0, N, D0, D) :-
+	M1 is M0 + 1,
+	degree(A, M1, M, N0, N, D0, D).
+degree(box(_,A), M0, M, N0, N, D0, D) :-
+	M1 is M0 + 1,
+	degree(A, M1, M, N0, N, D0, D).
+degree(dl(I,B,A), M0, M, N0, N, D0, D) :-
+    (
+	continuous(I)
+    ->
+	D1 = D0
+    ;
+	D1 is D0 + 1
+    ),
+	M1 is M0 + 1,
+	N1 is N0 + 1,
+	degree(A, M1, M2, N1, N2, D1, D2),
+	degree(B, M2, M, N2, N, D2, D).
+degree(dr(I,A,B), M0, M, N0, N, D0, D) :-
+    (
+	continuous(I)
+    ->
+	D1 = D0
+    ;
+	D1 is D0 + 1
+    ),
+	M1 is M0 + 1,
+	N1 is N0 + 1,
+	degree(A, M1, M2, N1, N2, D1, D2),
+	degree(B, M2, M, N2, N, D2, D).
+degree(p(I,A,B), M0, M, N0, N, D0, D) :-
+    (
+	continuous(I)
+    ->
+	D1 = D0
+    ;
+	D1 is D0 + 1
+    ),
+	M1 is M0 + 1,
+	N1 is N0 + 1,
+	degree(A, M1, M2, N1, N2, D1, D2),
+	degree(B, M2, M, N2, N, D2, D).
+
+% = total_degree(+List, ?Max)
+%
+% true if Max is the maximum degree of the formulas in List
+
+total_degree(L, TotU, TotB, Disco) :-
+	total_degree(L, 0, TotU, 0, TotB, 0, Disco).
+
+total_degree([], TotU, TotU, TotB, TotB, Disco, Disco).
+total_degree([H|T], TotU0, TotU, TotB0, TotB, Disco0, Disco) :-
+	degree(H, TotU0, TotU1, TotB0, TotB1, Disco0, Disco1),
+	total_degree(T, TotU1, TotU, TotB1, TotB, Disco1, Disco).
+
+% = formula_atoms(+Formula, ?Total)
+
+formula_atoms(lit(_), N0, N) :-
+	N is N0 + 1.
+formula_atoms(dia(_,A), N0, N) :-
+	formula_atoms(A, N0, N).
+formula_atoms(box(_,A), N0, N) :-
+	formula_atoms(A, N0, N).
+formula_atoms(dl(_,B,A), N0, N) :-
+	formula_atoms(A, N0, N1),
+	formula_atoms(B, N1, N).
+formula_atoms(dr(_,A,B), N0, N) :-
+	formula_atoms(A, N0, N1),
+	formula_atoms(B, N1, N).
+formula_atoms(p(_,A,B), N0, N) :-
+	formula_atoms(A, N0, N1),
+	formula_atoms(B, N1, N).
+
+% = total_atoms(+List, ?Total)
+
+total_atoms(List, Total) :-
+	total_atoms(List, 0, Total).
+
+total_atoms([], Tot, Tot).
+total_atoms([H|T], Tot0, Tot) :-
+	formula_atoms(H, 0, TotF),
+	Tot1 is Tot0 + TotF,
+	total_atoms(T, Tot1, Tot).
+
+% =
+
+total_sorted_atoms(List, Total) :-
+	total_atoms(List, empty, Tree),
+	btree_to_list(Tree, Total).
+
+total_sorted_atoms([], Tot, Tot).
+total_sorted_atoms([H|T], Tot0, Tot) :-
+	sorted_formula_atoms(H, Tot0, Tot1),
+	total_sorted_atoms(T, Tot1, Tot).
+
+sorted_formula_atoms(lit(A), T0, T) :-
+    (
+	btree_get_replace(T0, A, N0, N, T)
+    ->
+	N is N0 + 1
+    ;
+	btree_put(T0, A, 1, T)
+    ).
+sorted_formula_atoms(dia(_,A), T0, T) :-
+	sorted_formula_atoms(A, T0, T).
+sorted_formula_atoms(box(_,A), T0, T) :-
+	sorted_formula_atoms(A, T0, T).
+sorted_formula_atoms(dl(_,B,A), T0, T) :-
+	sorted_formula_atoms(A, T0, T1),
+	sorted_formula_atoms(B, T1, T).
+sorted_formula_atoms(dr(_,A,B), T0, T) :-
+	sorted_formula_atoms(A, T0, T1),
+	sorted_formula_atoms(B, T1, T).
+sorted_formula_atoms(p(_,A,B), T0, T) :-
+	sorted_formula_atoms(A, T0, T1),
+	sorted_formula_atoms(B, T1, T).
+
+% =
+
+total_count_atoms([G|As], Total) :-
+	total_count_atoms(As, empty, Tree0),
+	count_formula_atoms_pos(G, Tree0, Tree),
+	btree_to_list(Tree, Total).
+
+total_count_atoms([], Tot, Tot).
+total_count_atoms([H|T], Tot0, Tot) :-
+	count_formula_atoms_neg(H, Tot0, Tot1),
+	total_count_atoms(T, Tot1, Tot).
+
+count_formula_atoms_pos(lit(A), T0, T) :-
+    (
+	btree_get_replace(T0, A, N0, N, T)
+    ->
+	N is N0 + 1
+    ;
+	btree_put(T0, A, 1, T)
+    ).
+count_formula_atoms_pos(dia(_,A), T0, T) :-
+	count_formula_atoms_pos(A, T0, T).
+count_formula_atoms_pos(box(_,A), T0, T) :-
+	count_formula_atoms_pos(A, T0, T).
+count_formula_atoms_pos(dl(_,B,A), T0, T) :-
+	count_formula_atoms_pos(A, T0, T1),
+	count_formula_atoms_neg(B, T1, T).
+count_formula_atoms_pos(dr(_,A,B), T0, T) :-
+	count_formula_atoms_pos(A, T0, T1),
+	count_formula_atoms_neg(B, T1, T).
+count_formula_atoms_pos(p(_,A,B), T0, T) :-
+	count_formula_atoms_pos(A, T0, T1),
+	count_formula_atoms_pos(B, T1, T).
+
+count_formula_atoms_neg(lit(A), T0, T) :-
+    (
+	btree_get_replace(T0, A, N0, N, T)
+    ->
+	N is N0 - 1
+    ;
+	btree_put(T0, A, -1, T)
+    ).
+count_formula_atoms_neg(dia(_,A), T0, T) :-
+	count_formula_atoms_neg(A, T0, T).
+count_formula_atoms_neg(box(_,A), T0, T) :-
+	count_formula_atoms_neg(A, T0, T).
+count_formula_atoms_neg(dl(_,B,A), T0, T) :-
+	count_formula_atoms_neg(A, T0, T1),
+	count_formula_atoms_pos(B, T1, T).
+count_formula_atoms_neg(dr(_,A,B), T0, T) :-
+	count_formula_atoms_neg(A, T0, T1),
+	count_formula_atoms_pos(B, T1, T).
+count_formula_atoms_neg(p(_,A,B), T0, T) :-
+	count_formula_atoms_neg(A, T0, T1),
+	count_formula_atoms_neg(B, T1, T).
+
+% =
+
+update_heap(Vital, Del, Heap0, Heap) :-
+	add_to_front(Vital, Heap0, Heap1),
+	remove_from_heap(Del, Heap1, Heap).
+
+add_to_front([], Heap, Heap).
+add_to_front([I-J|Vs], Heap0, Heap) :-
+	select1(_-x(P,F,I,C,_,L1), Heap0, Heap1),
+	select1(_-x(Q,F,J,D,_,L2), Heap1, Heap2),
+	add_to_front(Vs, [1-x(P,F,I,C,[F-J],L1),1-x(Q,F,J,D,[F-I],L2)|Heap2], Heap).
+
+remove_from_heap([], Heap, Heap).
+remove_from_heap([I-J|Vs], Heap0, Heap) :-
+	select1(N1-x(P,F,I,C,M1,L1), Heap0, Heap1),
+	select1(N2-x(Q,F,J,D,M2,L2), Heap1, Heap2),
+    (
+	select1(F-J,M1,M3)
+    ->
+	N3 is N1 - 1,
+	IH = x(P,F,I,C,M3,L1)
+    ;
+	N3 = N1,
+	IH = x(P,F,I,C,M1,L1)
+    ),
+    (
+	select1(F-I,M2,M4)
+    ->
+	N4 is N2 - 1,
+	JH = x(Q,F,J,D,M4,L2)
+    ;
+	N4 = N2,
+	JH = x(Q,F,J,D,M2,L2)
+    ),
+	ord_insert(Heap2, N3-IH, Heap3),
+	ord_insert(Heap3, N4-JH, Heap4),
+	remove_from_heap(Vs, Heap4, Heap).
+
+merge_heaps(H0, H1, H) :-
+	reverse_key_list(H0, R0),
+	reverse_key_list(H1, R1),
+	sort(R0, S0),
+	sort(R1, S1),
+	merge_lists(S0, S1, S),
+	reverse_key_list(S, H2),
+	keysort(H2, H).
+
+
+% = ord_key_union(+Map1, +Map2, ?Map3)
+%
+% as ord_union/3, but for ordered sets of Key-Value pairs, where Value
+% is itself an ordered set. If Map1 and Map2 contain the same Key,
+% Map3 will contain the ord_union of the two values.                RM
+
+ord_key_union_min([], Set2, Set2).
+ord_key_union_min([H1-V1|T1], Set2, Union) :-
+	ord_key_union_min_2(Set2, H1, V1, T1, Union).
+
+ord_key_union_min_2([], H1, V1, T1, [H1-V1|T1]).
+ord_key_union_min_2([H2-V2|T2], H1, V1, T1, Union) :-
+	compare(Order, H1, H2),
+	ord_key_union_min_3(Order, H1, V1, T1, H2, V2, T2, Union).
+
+ord_key_union_min_3(<, H1, V1, T1, H2, V2, T2, [H1-V1|Union]) :-
+	ord_key_union_min_2(T1, H2, V2, T2, Union).
+ord_key_union_min_3(=, H1, V1, T1, _, V2, T2, [H1-V|Union]) :-
+	V is min(V1, V2),
+	ord_key_union_min(T1, T2, Union).
+ord_key_union_min_3(>, H1, V1, T1, H2, V2, T2, [H2-V2|Union]) :-
+	ord_key_union_min_2(T2, H1, V1, T1, Union).
+
+
+reverse_key_list([], []).
+reverse_key_list([K-x(_,_,I,_,_,_)|As], [I-K|Bs]) :-
+	reverse_key_list(As, Bs).
+
+check_runtime_limits(Gen) :-
+	check_gen(Gen),
+	check_cpu,
+	check_inf.
+
+check_runtime_limits :-
+	check_cpu,
+	check_inf.
+
+check_gen(Gen) :-
+    (
+	'$MAX_GEN'(MGen)
+    ->
+	check_gen(Gen, MGen)
+    ;
+	true
+    ).
+
+check_gen(Gen, MGen) :-
+    (
+	Gen > MGen
+    ->
+	fail
+    ;
+	true
+    ).
+
+check_cpu :-
+    (
+	'$START_CPU'(SCPU),
+        '$MAX_CPU'(MCPU)
+    ->
+	check_cpu(SCPU, MCPU)
+    ;
+	true
+    ).
+
+check_cpu(SCPU, MCPU) :-
+	statistics(cputime, CPU),
+	DCPU is CPU - SCPU,
+    (
+	DCPU > MCPU
+    ->
+	output_statistics,
+	format('Aborting: cputime is  ~w (max ~w)~2n', [DCPU,MCPU]),
+	throw(aborted)
+    ;
+	true
+    ).
+
+check_inf :-
+    (
+	'$START_INF'(SINF),
+        '$MAX_INF'(MINF)
+    ->
+	check_inf(SINF, MINF)
+    ;
+	true
+    ).
+
+check_inf(SINF, MINF) :-
+	statistics(inferences, INF),
+	DINF is INF - SINF,
+    (
+	DINF > MINF
+    ->
+	output_statistics,
+	format('Aborting: inferences  ~w (max ~w)~n~2n', [DINF,MINF]),
+	throw(aborted)
+    ;
+	true
+    ).
+
+backslash_quotes([], []).
+backslash_quotes([92,34|Ss], [92,34|Rs]) :-
+	!,
+	backslash_quotes(Ss, Rs).
+backslash_quotes([34|Ss], [92,34|Rs]) :-
+	!,
+	backslash_quotes(Ss, Rs).
+backslash_quotes([S|Ss], [S|Rs]) :-
+	backslash_quotes(Ss, Rs).
+
+% = reduce the semantics (and apply any grammar-specific translations).
+
+reduce_semantics(Sem0, Sem) :-
+	reduce_sem(Sem0, Sem1),
+	reduce_semantics1(Sem1, Sem).
+
+reduce_semantics1(Sem0, Sem) :-
+	translate_sem(Sem0, Sem),
+	!.
+reduce_semantics1(Sem, Sem).
+
+% = open a temporary log file
+
+open_log(File) :-
+	new_output_file(File, log).
+
+% = save the Grail executable
+
+save_exec :-
+	set_prolog_flag(optimise, true),
+	qsave_program(grail3, [autoload(true),stand_alone(true),toplevel(start)]).

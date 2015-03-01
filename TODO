@@ -1,0 +1,42 @@
+Todo
+
+! Update the lexicon module to allow a best-first and an interactive
+  mode.
+! Portray the structural rules in a separate dot file.
+! Keep track of the heap (which the user and Regin's algorithm modify)
+  and perform a sort of heap intersection, keeping only the smallest
+  keys for the elements of the two heaps (the recursive one and the
+  one recalculated for the ACC condition).
+! Make graph portray routine behave correctly in the face of
+  backtracking (ie. portray the current state instead of the last
+  failed state).
+- Add configure option to select the type of array to use: log2^n (for
+  any value on n) or the constant time array_hack.
+- Add option to hide inert unary modes (ie. they are not displayed and
+  contracted automatically, their effect being visible only in terms
+  of excluded axiom links).
+- Allow full Unicode grammar files, instead of just Iso Latin 1
+  characters.
+
+Done
+
++ Allow a grammar to include documentation in the form of HTML (easily
+  portrayed with XPCE).
+  Done! Now add some comments to all grammars.
++ Add option to automatically perform single-possibility axiom links.
+  Done! This is the "partial" options for axiom links.
++ Exclude empty antecedent axiom links (implemented by means of binary
+  inert/1 declaration in version 3.1)
++ Include a possibility to covert Grail's lambda-term semantics into
+  Prolog facts and queries. (Done, but needs more testing!)
++ Allow accented characters in grammar files.
+
+Wish List
+
+- I would like to add a weighted finite state transducer component,
+  allowing the user to specify a morpho-tactical component enabling a
+  grammar to treat inflection etc. much more elegantly than it does
+  now.
+- I would like to have a user interface based on TclDot
+- I would like to implement a socket-based client-server model, with
+  several pluggable user interface options.
