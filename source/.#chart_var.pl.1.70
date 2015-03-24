@@ -13,7 +13,7 @@
 :- use_module(library(pce_util)).
 
 :- dynamic sentence_length/1, total_formulas/1, unparsed/3, parsed/2.
-:- dynamic word/3, word/4, word/5, stored/6, max_queue_size/1, justify/2.
+:- dynamic word/3, word/4, word/5, stored/6, max_queue_size/1, grail_heap/2, justify/2.
 :- dynamic crosses/3, crosses/4, constituent/3, constituent/4, current_sentence/1.
 :- dynamic translate_form/2, translate_sem/2, state/2.
 :- dynamic active_rule/1, vp_left/1, let_right/1, '$PROOFAXIOMS'/1.
@@ -30,8 +30,7 @@ display_unreduced_semantics(no).
 
 default_depth_limit(10000).
 %default_depth_limit(25000).
-output_proofs(nd).
-%output_proofs(chart).
+output_proofs(chart).
 
 % = function combining the weight of items given a rule application.
 
@@ -93,11 +92,6 @@ output_proofs(nd).
 % extraction stacks are for left extraction (fairly
 % rare) and right extraction.
 
-% = main
-%
-% handles the command line invocation of this script; all command line arguments are treated
-% as file names to be compiled and parsed (using chart_parse_all).
-
 main :-
 	current_prolog_flag(argv, Argv),
         append(_, [--|Av], Argv),
@@ -110,6 +104,15 @@ main([F|Fs]) :-
 	compile(F),
 	chart_parse_all,
 	main(Fs).
+
+% = export chart contents to the file 'stored.txt'
+
+export :-
+	shell('rm stored.txt', _),
+	tell('stored.txt'),
+	listing(stored),
+	listing(justification),
+	told.
 
 % = parse all sentences.
 
@@ -270,11 +273,6 @@ sentence(S, Sem) :-
 	update_crossing(S),
 	user:sent(S, Sem).
 
-% = update_crossing(+SentNo)
-%
-% asserts basic facts in preparation for parsing SentNo; this includes, for each pair of string
-% positions, the number of constituent boundaries it crosses.
-
 update_crossing(S) :-
 	retractall(current_sentence(_)),
 	assert(current_sentence(S)),
@@ -290,10 +288,6 @@ update_crossing(S) :-
 	retractall(let_right(_)),
 	assert((word(A,B,C) :- word(S,A,B,C))).
 
-% = print_statistics
-%
-% output parse statistics to the log file
-
 print_statistics(State, N0, DepthLimit, Inferences0, CPU0) :-
 	   statistics(inferences, Inferences1),
 	   statistics(process_cputime, CPU1),
@@ -304,31 +298,6 @@ print_statistics(State, N0, DepthLimit, Inferences0, CPU0) :-
 	   robust_max_queue_size(MaxQ),
 	   format(plog, '~w\t~w\t~w\t~w\t~w\t~2f\t~w\t~w\t', [N0, State, Length, TotalForms, DepthLimit, CPU, Inferences, MaxQ]),
 	   output_rule_statistics.
-
-
-% = statistics_header
-%
-% add header with column names to the parse logs file
-
-statistics_header :-
-	check_plog_stream,
-	rule_counts_init(Counts),
-	format(plog, 'Sent\tState\tLength\tForms\tDepth\tCPU\tInfs\tQueue', []),
-	print_header(Counts).
-
-% print the rule names
-
-print_header([]) :-
-	nl(plog).
-print_header([R-_|Rest]) :-
-	format(plog, '~w\t', [R]),
-	print_header(Rest).
-
-% = try_recover_chart_semantics
-%
-% once the DepthLimit has been exceeded, check if the chart contains a solution
-% and if so, recover its semantics (and count the parse as a success); if not
-% the parse is added as a failure (for the current depth_limit) and noted as such.
 
 try_recover_chart_semantics(N0, DL, Inferences, CPU) :-
 	final_item(Goal, Index, Sem),
@@ -348,6 +317,59 @@ try_recover_chart_semantics(N0, DL, Inferences, CPU) :-
 	format('~nDepth limit exceeded: ~w~n', [N0]),
         print_statistics('L', N0, DL, Inferences, CPU).
 
+% = print_chart(+SentNo)
+%
+% output the chart contexts to a GraphViz file
+
+print_chart(SentNo) :-
+	concat_atom(['chart',SentNo,'.dot'], FileName),
+	open(FileName, write, Stream),
+	print_chart1(Stream),
+	close(Stream).
+print_chart1(Stream) :-
+	format(Stream, 'digraph "chart" {~n', []),
+	stored(_, _, I, J, F, _),
+	format(Stream, '~w -> ~w [label="~p"]~n', [I,J,F]),
+	fail.
+print_chart1(Stream) :-
+	format(Stream, '}~n', []).
+
+% = chart_to_heap(Ex)
+%
+% conver chart contents to a heap to be passed to Grail with
+% the goal of handing an incomplete parse over to Grail.
+% TODO: complete
+
+chart_to_heap(Ex) :-
+	findall(P-X, chart_prob(P,X), List),
+	empty_heap(Heap0),
+	add_list_to_heap(List, Heap0, Heap),
+	assert(grail_heap(Ex, Heap)).
+
+add_list_to_heap([], Heap, Heap).
+add_list_to_heap([P-X|Xs], Heap0, Heap) :-
+	add_to_heap(Heap0, P, X, Heap1),
+	add_list_to_heap(Xs, Heap1, Heap).
+
+parse_best_span(N0, I, J) :-
+	parse_best_span(I, J, L, []),
+	format('~w ~w', [N0, L]).
+
+chart_prob(D-Prob,t(I,J,Atom,F,Sem)) :-
+	stored(_, _, I, J, F, data(Pros, Sem, Prob, Pros, [], [], [], [])),
+	D is J - I,
+	pros_to_atom(Pros, Atom).
+
+pros_to_atom(Pros, Atom) :-
+	pros_to_list(Pros, List, []),
+	concat_atom(List, '_', Atom).
+
+pros_to_list(p(_,P1,P2), L0, L) :-
+	!,
+	pros_to_list(P1, L0, L1),
+	pros_to_list(P2, L1, L).
+pros_to_list(P, [P|L], L).
+
 % = startsymbol(+Start, +Semantics)
 %
 % true if Start is a valid category for spanning the entire chart.
@@ -364,13 +386,39 @@ startsymbol(dr(0,lit(s),lit(s)), lambda(ADV,merge(drs([event(E)],[bool(E,=,'even
 startsymbol(dr(0,lit(s(_)),lit(s(_))), lambda(ADV,merge(drs([event(E)],[bool(E,=,'event?')]),appl(appl(ADV,lambda(_,drs([],[]))),E)))).
 startsymbol(lit(let), lambda(_,drs([],[]))).
 
+grail_chart(L) :-	
+	print_grail_semantics_header,
+	/* separate words from forula assignments */
+	split_a_b_c_ds(L, Ws0, POSs0, Lemmas0, Fs0),
+	/* turn POS tags from atoms into terms */
+	list_atom_term(POSs0, POSs),
+	list_atom_term(Lemmas0, Lemmas),
+	/* separate formulas from probabilities */
+	list_atom_term(Fs0, FPs, []),
+	/* compute sentence string */
+	remove_brackets(Ws0, Ws),
+	init_chart,
+	empty_heap(Heap),
+	create_chart(Ws, POSs, Lemmas, FPs, 0, Heap, 0, _MaxVar, SemInfo, [], Chart, []),
+    (
+	chart_parse(Chart, Semantics0)
+    ->
+        chart_semantics(SemInfo, Semantics0, Semantics),
+        print_grail_semantics(Semantics),
+        print_grail_semantics_tail
+    ;
+        true
+    ),
+        /* output final chart for debugging */
+        export,
+	finished_dialog,
+	halt.
 
 chart_semantics(SemInfo0, Semantics0, Semantics) :-
     (
-        '$PROOFAXIOMS'(PFs),
- 	update_seminfo(SemInfo0, PFs, SemInfo)
+        '$PROOFAXIOMS'(PFs)
     ->
-        true
+	update_seminfo(SemInfo0, PFs, SemInfo)
     ;
         SemInfo0 = SemInfo
     ),
@@ -423,8 +471,38 @@ print_grail_semantics_tail :-
 	latex_tail(sem),
 	close(sem),
 	pdflatex_semantics.
+	
+add_heap_to_chart(H0) -->
+	{get_from_heap(H0, _Key, Datum, H)},
+	!,
+	[Datum],
+	add_heap_to_chart(H).
+add_heap_to_chart(_) -->
+	[].
 
-% = prob_parse(+ListOfAxioms, -Result)
+% create_chart(+WordList, +POSList, +LemmaList, +FormulaProbList, +WordNo, Heap)
+
+create_chart([], [], [], [], N, H, V, V, S, S) -->
+	{retractall(sentence_length(_)),
+	 assert(sentence_length(N))},
+	add_heap_to_chart(H).
+% skip final punctuation if its formula is "boring"
+%LPcreate_chart([_], [PUN], [_], [FP], N, H, V, V, S, S) -->
+%LP	{ is_punct(PUN),
+%LP          boring(FP) ,
+%LP	  retractall(sentence_length(_)),
+%LP	  assert(sentence_length(N)) },
+%LP        !,
+%LP	add_heap_to_chart(H).
+create_chart([W|Ws], [P|Ps], [L|Ls], [FP|FPs], N0, H0, V0, V, S0, S) -->
+	{ N is N0 + 1,
+	  assert(word(W, P, L, N0, N)),
+	  assert_if_verb(P, N0),
+	  assert_if_interpunction(P, N),
+	  verify_word(W, N0, N)},
+	append_item_and_update_heap(FP, W, P, L, N0, N, V0, V1, S0, S1, H0, H),
+	create_chart(Ws, Ps, Ls, FPs, N, H, V1, V, S1, S).
+
 
 prob_parse(List, Result) :-
 	check_log_stream,
@@ -459,119 +537,27 @@ lemma_sequence([L|Ls], N0, N) :-
 	lemma_sequence(Ls, N1, N).
 
 
-% = list_to_chart
-%
-% convert a list of (weighted) lexical entries to an agenda.
-% add the best item of each word to the agenda, while constructing a heap with
-% all of the alternatives.
-%
-% The result is an agenda with the best items for each word from left to right
-% followed by the alternatives in order of decreasing weight.
-
 list_to_chart([], N, H, As0, As, V, V, S, S) :-
 	retractall(sentence_length(_)),
 	assert(sentence_length(N)),
 	add_heap_to_chart(H, As0, As).
-% skip final punctuation if its formula is "boring"
-%LPlist_to_chart([si(_, PUN, _, FP)], N, H, As0, As, V, V, S, S) :-
-%LP	  is_punct(PUN),
-%LP       boring(FP) ,
-%LP	  retractall(sentence_length(_)),
-%LP	  assert(sentence_length(N)),
-%LP       !,
-%LP	add_heap_to_chart(H, As0, As).
 list_to_chart([si(W,Pos,Lemma,FPs)|Ws], N0, H0, As0, As, V0, V, S0, S) :-
 	N1 is N0 + 1,
 	assert(word(W, Pos, Lemma, N0, N1)),
 	assert_if_verb(Pos, N0),
-	assert_if_let(Pos, N1),
+	assert_if_interpunction(Pos, N1),
 	append_item_and_update_heap(FPs, W, Pos, Lemma, N0, N1, V0, V1, S0, S1, H0, H, As0, As1),
 	list_to_chart(Ws, N1, H, As1, As, V1, V, S1, S).
-
-% = add_heap_to_chart
-%
-% add the alternative items of the agenda by decreasing weight.
-
-add_heap_to_chart(H0) -->
-	{get_from_heap(H0, _Key, Datum, H)},
-	!,
-	[Datum],
-	add_heap_to_chart(H).
-add_heap_to_chart(_) -->
-	[].
-
-
-% = append_item_and_update_heap
-%
-% adds best item to the list and all alternatives to the heap.
-
-append_item_and_update_heap([], _, _, _, _, _, _, S, S, H, H) -->
-	[].
-append_item_and_update_heap([F0-P|FPs], W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) -->
-	!,
-	{create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
-	 IN1 is IN0 + 1},
-	[Item],
-	{update_heap(FPs, P, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H0, H)}.
-append_item_and_update_heap([F0,P|FPs], W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) -->
-	{create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
-	 IN1 is IN0 + 1},
-	[Item],
-	{update_heap(FPs, P, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H0, H)}.
-
-% = update_heap
-%
-% adds items to the heap
-
-update_heap([], _, _, _, _, _, _, IN, IN, S, S, H, H).
-update_heap([F0-P|FPs], PMax, W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) :-
-	!,
-	create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
-	IN1 is IN0 + 1,
-	Key is PMax/P,
-	add_to_heap(H0, Key, Item, H1),
-	update_heap(FPs, PMax, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H1, H).
-update_heap([F0,P|FPs], PMax, W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) :-
-	create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
-	IN1 is IN0 + 1,
-	Key is PMax/P,
-	add_to_heap(H0, Key, Item, H1),
-	update_heap(FPs, PMax, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H1, H).
-
-% = create_item(+Formula, +Probability, +Word, +POStag, +Lemma, +Left, +Right, +ItemNo, ListIn, ListOut, -Item)
-%
-% construct Item based on all available information
-
-create_item(F0, P, W, Pos, Lemma, N0, N1, IN, [IN-t(W,PosTT,Lemma,F)|Ss], Ss, item(F, N0, N1, Data)) :-
-	macro_expand(F0, F1),
-	get_pos_tt(Pos, PosTT),
-	enrich_formula(Lemma, PosTT, F1),
-	correct_formula(PosTT, F1, F),
-	create_data(W, F, Lemma, '$VAR'(IN), P, N0, N1, Data).
-
-% = get_semantics(+ChartItem, ?Semantics)
-%
-% true if ChartItem has meaning Semantics
 
 get_semantics(item(_, _, _, Data), Sem) :-
 	get_data_semantics(Data, Sem).
 
 get_data_semantics(data(_, Sem, _, _, _, _, _, _), Sem).
 
-% = get_weight(+ChartItem, ?Weight)
-%
-% true if ChartItem has Weight
-
 get_weight(item(_, _, _, Data), Weight) :-
 	get_data_weight(Data, Weight).
 
 get_data_weight(data(_, _, Weight, _, _, _, _, _), Weight).
-
-% = robust_max_queue_size(+QueueSize)
-%
-% computes the size of the queue; normally this is stored as a dynamic predicate max_queue_size/1.
-% However, if it is not, this predicate will scan the chart to find the chart item with the
-% highest value.
 
 robust_max_queue_size(MaxQ) :-
     (
@@ -609,17 +595,10 @@ robust_max_queue_size2(1, Current, MaxQ) :-
 robust_max_queue_size2(Step, Current, MaxQ) :-
 	robust_max_queue_size1(Current, Step, MaxQ).
 
-% = is_punct(+POS)
-%
-% true if POS tag is an interpunction symbol
 
 is_punct(ponct).
 is_punct(pun).
 is_punct(ponct-pun).
-
-% = boring(+Entry)
-%
-% true if all solutions formulas assigned to a word are "boring"
 
 boring([]).
 boring([Item-_|FPs]) :-
@@ -634,10 +613,32 @@ boring_item(let).
 boring_item(dl(0,_,txt)).
 boring_item(dl(0,_,lit(txt))).
 
-% = enrich_formula(+Word, +POStag, ?Formula)
-%
-% given a Word-POStag pair, tries to unify Formula with a formula containing more detailed information;
-% for example, Word with formula dr(0,pp(_),np) is instantiated to dr(0,pp(Word),np)
+append_items([], _, _, _, _, _, IN, IN, S, S) -->
+	[].
+append_items([F0-P|FPs], W, Pos, Lemma, N0, N1, IN0, IN, S0, S) -->
+	!,
+	{create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, IN1, S0, S1, Item)},
+	[Item],
+	append_items(FPs, W, Pos, Lemma, N0, N1, IN1, IN, S1, S).
+append_items([F0,P|FPs], W, Pos, Lemma, N0, N1, IN0, IN, S0, S) -->
+	{create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
+	 IN1 is IN0 + 1},
+	[Item],
+	append_items(FPs, W, Pos, Lemma, N0, N1, IN1, IN, S1, S).
+
+append_item_and_update_heap([], _, _, _, _, _, _, S, S, H, H) -->
+	[].
+append_item_and_update_heap([F0-P|FPs], W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) -->
+	!,
+	{create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
+	 IN1 is IN0 + 1},
+	[Item],
+	{update_heap(FPs, P, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H0, H)}.
+append_item_and_update_heap([F0,P|FPs], W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) -->
+	{create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
+	 IN1 is IN0 + 1},
+	[Item],
+	{update_heap(FPs, P, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H0, H)}.
 
 enrich_formula(par, _, dr(0,dl(0,lit(np(_,_,_)),lit(s(inf(par)))),dl(0,lit(np(_,_,_)),lit(s(inf(base)))))) :-
 	!.
@@ -704,6 +705,28 @@ correct_formula(ver:impe, dr(0, dr(0, lit(s(S)), lit(s(Q))), lit(np(nom,A,B))), 
 	!.
 correct_formula(_, F, F).
 
+update_heap([], _, _, _, _, _, _, IN, IN, S, S, H, H).
+update_heap([F0-P|FPs], PMax, W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) :-
+	!,
+	create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
+	IN1 is IN0 + 1,
+	Key is PMax/P,
+	add_to_heap(H0, Key, Item, H1),
+	update_heap(FPs, PMax, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H1, H).
+update_heap([F0,P|FPs], PMax, W, Pos, Lemma, N0, N1, IN0, IN, S0, S, H0, H) :-
+	create_item(F0, P, W, Pos, Lemma, N0, N1, IN0, S0, S1, Item),
+	IN1 is IN0 + 1,
+	Key is PMax/P,
+	add_to_heap(H0, Key, Item, H1),
+	update_heap(FPs, PMax, W, Pos, Lemma, N0, N1, IN1, IN, S1, S, H1, H).
+
+create_item(F0, P, W, Pos, Lemma, N0, N1, IN, [IN-t(W,PosTT,Lemma,F)|Ss], Ss, item(F, N0, N1, Data)) :-
+	macro_expand(F0, F1),
+	get_pos_tt(Pos, PosTT),
+	enrich_formula(Lemma, PosTT, F1),
+	correct_formula(PosTT, F1, F),
+	create_data(W, F, Lemma, '$VAR'(IN), P, N0, N1, Data).
+
 
 get_pos_tt(Pos, PosTT) :-
       (
@@ -763,27 +786,6 @@ assert_active_rules([]).
 assert_active_rules([R|Rs]) :-
 	assert(active_rule(R)),
 	assert_active_rules(Rs).
-
-all_active_rule_statistics :-
-	clause(sent(_Number, Sem), prob_parse(List, Sem)),
-	all_active_rule_statistics(List),
-	fail.
-all_active_rule_statistics.
-
-all_active_rule_statistics(List) :-	
-	init_chart,
-	empty_heap(Heap),
-	list_to_chart(List, 0, Heap, Axioms, [], 0, _V, _SemInfo, []),
-	all_active_rule_statistics1(Axioms).
-
-% TODO: complete!
-
-all_active_rule_statistics1([]).
-all_active_rule_statistics1([item(F,_,_,_)|As]) :-
-	rules_trigger(F, L, []),
-	sort(L, Set),
-	do_something_with(Set),
-	all_active_rule_statistics1(As).
 
 % = rules_trigger(+Formula, -ListOfInferences)
 %
@@ -937,6 +939,185 @@ rules_trigger(box(_,A)) -->
 rules_trigger(_) -->
 	!,
 	[].
+
+% = interactive_parse(+ActiveFormulas, -Semantics)
+
+interactive_parse([], drs([],[])).
+interactive_parse([A|As], Sem) :-
+	add_axioms_to_chart([A|As], 0, N, Active),
+	interactive_parse1(Active, N),
+	check_solution(Sem).
+
+interactive_parse1(Active0, N0) :-
+    (
+        Active0 = [_]
+    ->
+        true
+    ;
+        nl,
+        portray_active(Active0),
+	interactive_rule(Active0, Active, N0, N),
+	interactive_parse1(Active, N)
+    ).
+
+portray_active([]).
+portray_active([A|As]) :-
+	stored(A,_B,C,D,E,data(Pros,_,W,_,L1,L2,L3,L4)),
+	!,
+    (
+        L1 = [], L2 = [], L3 = [], L4 = []
+    ->
+     	format('~t~w~3| ~t~w~3+-~w~t~3+~t~p~3+ ~p~t~36+ ~p~n', [A,C,D,W,E,Pros])
+    ;
+	format('~t~w~3| ~t~w~3+-~w~t~3+~t~p~3+ ~p~t~36+ ~p ~p ~p ~p ~p~n', [A,C,D,W,E,Pros,L1,L2,L3,L4])
+     ),
+	portray_active(As).
+
+portray_chart(N) :-
+	findall(stored(A,B,C,D,E,F), stored(A,B,C,D,E,F), List),
+	portray_chart(List, 0, N).
+
+interactive_rule(Active0, Active, N0, N) :-
+	read_potential_trigger(Active0, Consequences),
+	length(Consequences, L),
+   (
+        L = 1
+   ->
+        /* single rule application possible */
+        Consequences = [_-(Item-Just)]
+   ;
+        /* multiple rules possible, ask user */
+	portray_numbered_list(Consequences, 0),
+	read_integer(Cnsq, L),
+	nth0(Cnsq, Consequences, _-(Item-Just))
+   ),
+	apply_rule(Item, Just, Active0, Active, N0, N).
+
+apply_rule(Item, Just, Active0, Active, N0, N) :-
+	Just =.. [R|Args0],
+	sort(Args0,Args),
+	subtract_premisses(R, Args, Active0, Active1),
+	ord_insert(Active1, N0, Active),
+	N is N0 + 1,
+	add_item_to_agenda(Item, Just, queue(N0,N0), _).
+
+subtract_premisses(e_start_l, [A,B], Active0, Active) :-
+	!,
+    (
+	stored(A, _, _, _, dl(0,dr(0,_,dia(Ind,box(Ind,_))),_), _)
+    ->
+        ord_delete(Active0, B, Active)
+    ;
+        ord_delete(Active0, A, Active)
+    ).
+subtract_premisses(e_start, [A,B], Active0, Active) :-
+	!,
+    (
+	stored(A, _, _, _, dr(0,_,dr(0,_,dia(Ind,box(Ind,_)))), _)
+    ->
+        ord_delete(Active0, B, Active)
+    ;
+        ord_delete(Active0, A, Active)
+    ).
+subtract_premisses(ef_start, [A,B], Active0, Active) :-
+	!,
+    (
+	stored(A, _, _, _, dr(0,_,dr(0,_,dia(Ind,box(Ind,_)))), _)
+    ->
+        ord_delete(Active0, B, Active)
+    ;
+        ord_delete(Active0, A, Active)
+    ).
+subtract_premisses(ef_start_iv, [A,B], Active0, Active) :-
+	!,
+    (
+	stored(A, _, _, _, dr(0,_,dr(0,_,dia(Ind,box(Ind,_)))), _)
+    ->
+        ord_delete(Active0, B, Active)
+    ;
+        ord_delete(Active0, A, Active)
+    ).
+subtract_premisses(gap_i, [A,B,C], Active0, Active) :-
+        select(D, [A,B,C], R0),
+        stored(D, _, _, _, dl(0,dr(0,lit(s(S)),dia(Ind,box(Ind,X))),dr(0,lit(s(S)),box(Ind,dia(Ind,X)))), _),
+        select(E, R0, [F]),
+        stored(E, _, _, _, X, _),
+	!,
+	ord_delete(Active0, D, Active1),
+	ord_delete(Active1, F, Active).
+subtract_premisses(gap_c, _, Active, Active).
+subtract_premisses(gap_e, [A,B], Active0, Active) :-
+	select(D, [A,B], [E]),
+	stored(D, _, _, _, dl(0,dr(0,lit(s(S)),dia(Ind,box(Ind,dr(0,X,Y)))),dr(0,lit(s(S)),box(Ind,dia(Ind,dr(0,X,Y))))), _),
+	stored(E, _, _, _, X, _),
+	!,
+	ord_delete(Active0, E, Active).
+
+subtract_premisses(_, Ps, As0, As) :-
+	ord_subtract(As0, Ps, As).
+
+portray_numbered_list([], _).
+portray_numbered_list([A|As], N0) :-
+	format('~w. ~p~n', [N0,A]),
+	N is N0 + 1,
+	portray_numbered_list(As, N).
+
+read_potential_trigger(Active, Consequences) :-
+	read_integer_from_list(Input0, Active0, _Active1),
+	find_all_consequences1(Input0, Consequences0, Active0),
+    (
+        Consequences0 = []
+    ->
+        format('No rule application possible, select another trigger!~n', []),
+        read_potential_trigger(Active, Consequences)
+    ;
+        Consequences = Consequences0
+    ).
+	
+read_integer_from_list(Input, List0, List) :-
+	robust_read(Input0),
+    (
+        integer(Input0),
+        select(Input0, List0, List)
+    ->
+        Input = Input0
+    ;
+        Input0 = a
+    ->
+        format('Aborted!~n', []),
+        fail
+    ;
+        Input0 = abort
+    ->
+        format('Aborted!~n', []),
+        fail
+    ;
+        format('Input an integer from ~w (or type "a." to abort)~n', [List0]),
+        read_integer_from_list(Input, List0, List)
+    ).
+    
+read_integer(Input, N) :-
+	robust_read(Input0),
+    (
+	integer(Input0),
+        Input0 >= 0,
+        Input0 =< N
+    ->
+        Input = Input0
+    ;
+        write('Input an integer between 0 and ~w', [N]),
+        read_integer(Input, N)
+    ).
+
+robust_read(Input) :-
+	catch(read(Input), E, print_message(error, E)),
+    (
+        var(Input)
+    ->
+        robust_read(Input)
+    ;
+        true
+    ).
 	
 check_solution(Sem) :-
 	final_item(Goal, Index, Sem),
@@ -985,8 +1166,6 @@ items_in_chart([], _MaxIndex, []).
 items_in_chart([Antecedent|Antecedents], MaxIndex, [Index|Indices]) :-
 	item_in_chart(Antecedent, MaxIndex, Index),
 	items_in_chart(Antecedents, MaxIndex, Indices).
-
-% = variant for interactive parser
 
 find_all_consequences1(Index, Consequences, Active) :-
 	findall(Weight-(Consequence-Justification),
@@ -1125,6 +1304,7 @@ init_chart :-
 	retractall(vp_left(_)),
 	retractall(let_right(_)),
 	retractall(word(_,_,_,_,_)),
+	retractall(grail_heap(_,_)),
 	retractall(stored(_,_,_,_,_,_)),
 	retractall(key_index(_,_)),
 	write('-'),
@@ -1162,13 +1342,6 @@ update_data(data(Pros0, Sem, Prob, H, As, Bs, Cs, Ds), I, J, Justification, data
 
 % no simplification
 % simplify_pros(Pros, _, _, _, Pros).
-
-% = expand_data
-%
-% as update_data above, but reconstructs the Pros value based on its sim
-
-expand_data(data(Pros0, Sem, Prob, H, As, Bs, Cs, Ds), Justification, data(Pros, Sem, Prob, H, As, Bs, Cs, Ds)) :-
-	reconstruct_pros(Pros0, Justification, Pros).
 
 % simplifies the prosody information present in the chart entries: instead of
 % storing the complete term, which can get quite big, we only give the positions
@@ -1210,49 +1383,6 @@ pros_right(p(_,_,R), J) :-
 	pros_right(R, J).
 pros_mid(p(_,L,_), M) :-
 	pros_right(L, M).
-
-
-% = reconstruct_pros(+Pros, +Justification, -FullPros)
-%
-% recover the full prosodic tree label using the derivation trace justification/2 and
-% the words of the input sentence.
-% Does nothing for unreduced prosody.
-%
-% NOTE: the current strategy is rather wasteful: it recomputes the subtrees instead of
-% computing all useful subtrees in the chart just a single time.
-
-reconstruct_pros(I-J, [], Pros) :-
-	word(Pros, _, _, I, J),
-	!.
-reconstruct_pros(I-K, [A|As], Pros) :-
-	!,
-	select(Index, [A|As], Bs),
-	stored(Index, _, J, K, _, data(ProsD,_,_,_,_,_,_,_)),
-  (
-        I = J
-  ->
-	justification(Index, Just),
-	Just =.. [_|Args],
-	reconstruct_pros(ProsD, Args, Pros)
-  ;
-        /* special case for prod_i3 */
-        Pros = p(0,Pros0,ProsD),
-        reconstruct_pros(I-J, Bs, Pros0)
-  ).
-        
-reconstruct_pros(p(Ind,I-J,J-K), Args0, p(Ind,ProsL,ProsR)) :-
-	!,
-	select(Index1, Args0, Args),
-	stored(Index1, _, I, J, _, data(ProsL0,_,_,_,_,_,_,_)),
-	member(Index2, Args),
-	stored(Index2, _, J, K, _, data(ProsR0,_,_,_,_,_,_,_)),
-	justification(Index1, Just1),
-	Just1 =.. [_|Args1],
-	justification(Index2, Just2),
-	Just2 =.. [_|Args2],
-	reconstruct_pros(ProsL0, Args1, ProsL),
-	reconstruct_pros(ProsR0, Args2, ProsR).
-reconstruct_pros(Pros, _, Pros).
 
 
 % = coherent_item(+Left, +Right, +Data)
@@ -1359,32 +1489,73 @@ print_counts([C|Cs], _-C0) :-
 	format(plog, '~w\t', [C0]),
 	print_counts(Cs, C).
 
-% ==============================================
-% =               compute proofs               =
-% ==============================================
+% = reconstruct_pros(+Pros, Justification, -FullPros)
+%
+% recover the full prosodic tree label using the derivation trace justification/2 and
+% the words of the input sentence.
+% Does nothing for unreduced prosody.
+%
+% NOTE: the current strategy is rather wasteful: it recomputes the subtrees instead of
+% computing all useful subtrees in the chart just a single time.
 
-% reconstruct proofs from chart output
+reconstruct_pros(I-J, [], Pros) :-
+	word(Pros, _, _, I, J),
+	!.
+reconstruct_pros(I-K, [A|As], Pros) :-
+	!,
+	select(Index, [A|As], Bs),
+	stored(Index, _, J, K, _, data(ProsD,_,_,_,_,_,_,_)),
+  (
+        I = J
+  ->
+	justification(Index, Just),
+	Just =.. [_|Args],
+	reconstruct_pros(ProsD, Args, Pros)
+  ;
+        /* special case for prod_i3 */
+        Pros = p(0,Pros0,ProsD),
+        reconstruct_pros(I-J, Bs, Pros0)
+  ).
+        
+reconstruct_pros(p(Ind,I-J,J-K), Args0, p(Ind,ProsL,ProsR)) :-
+	!,
+	select(Index1, Args0, Args),
+	stored(Index1, _, I, J, _, data(ProsL0,_,_,_,_,_,_,_)),
+	member(Index2, Args),
+	stored(Index2, _, J, K, _, data(ProsR0,_,_,_,_,_,_,_)),
+	justification(Index1, Just1),
+	Just1 =.. [_|Args1],
+	justification(Index2, Just2),
+	Just2 =.. [_|Args2],
+	reconstruct_pros(ProsL0, Args1, ProsL),
+	reconstruct_pros(ProsR0, Args2, ProsR).
+reconstruct_pros(Pros, _, Pros).
 
 % = compute_proof
+
+new_proof_index(I, J, K) :-
+	proof_index(I0),
+	I is I0 + 1,
+	retractall(proof_index(_)),
+	assert(proof_index(I)),
+	assert(proof_index_right(I, J, K)).
+
 
 compute_proof(Index) :-
 	 output_proofs(Type),
      (
-	 proof_type(Type, Pred)
+	 Type == nd
      ->
-         compute_proof(Index, Pred)
+         compute_proof1(Index)
      ;
-         /* default to not producing a proof */
+         Type == chart
+     ->
+         compute_chart_proof(Index)
+     ;
          true
      ).
 
-% each proof type defines a proof transformation to be used on the
-% chart proof; the "chart" option outputs the chart proof directly.
-
-proof_type(chart, =).
-proof_type(nd, transform_proof).
-
-compute_proof(Index, Pred) :-
+compute_chart_proof(Index) :-
 	check_proof_stream,
 	check_prolog_proof_stream,
 	check_xml_stream,
@@ -1395,14 +1566,12 @@ compute_proof(Index, Pred) :-
         proof_axioms(Proof, Axioms, []),
 	retractall('$PROOFAXIOMS'(_)),
 	assert('$PROOFAXIOMS'(Axioms)),
-	call(Pred, Proof, TrueProof),
-	print_proof(Sent, TrueProof, pl_proof),
-	xml_proof(Sent, TrueProof, xml),
+	print_proof(Sent, Proof, pl_proof),
+	xml_proof(Sent, Proof, xml),
 	format(proof, '~n\\begin{multline}~n', []),
-	latex_proof(TrueProof, proof),
+	latex_proof(Proof, proof),
 	format(proof, '~n\\end{multline}~2n', []).
-
-compute_proof(Index, _) :-
+compute_chart_proof(Index) :-
     (
 	current_predicate('$CHART_CURRENT'/1)
     ->
@@ -1413,15 +1582,18 @@ compute_proof(Index, _) :-
 	format(proof, '~n% FAILED to compute proof for index ~w (~w)~n', [CUR,Index]),
 	format(log, '~nFAILED to compute proof for index ~w (~w)~n', [CUR,Index]),
 	format('~nFAILED to compute proof for index ~w (~w)~n', [CUR,Index]).
-	
 
 compute_chart_proof(Index, rule(Rule,Pros,Formula,Prems)) :-
 	justification(Index, Just),
 	Just =.. [Rule|Args0],
 	stored(Index, Idf, _L, _R, Formula, data(Pros0,_,_,_,_,_,_,_)),
+	/* use left-to-right order for prosodic label and for the order of the premisses */
+	/* however, use the order of the keys in the chart for the recursive computation */
+	/* this makes matching/unifying the subproofs in the recursive call easier */										   
 	sort_args(Args0, Args),
 	reconstruct_pros(Pros0, Args, Pros),
 	compute_chart_proof_list(Args0, List, KeyList),
+	/* restore left-to-right order */
 	keysort(KeyList, PList),
 	strip_keys(PList, Prems),
    (
@@ -1431,6 +1603,11 @@ compute_chart_proof(Index, rule(Rule,Pros,Formula,Prems)) :-
    ;
 	unify_rule(Rule, Index, Idf, Args0, Formula, List)
    ).
+
+% = proof_axions(+Proof, -DL0, -DL)
+%
+% true if difference list DL is the list of axioms used in Proof
+% from left to right.
 
 proof_axioms(rule(axiom,Pros,Formula,[])) -->
 	!,
@@ -1463,6 +1640,12 @@ compute_chart_proof_list([I|Is], [P|Ps], [K-P|KPs]) :-
 	compute_chart_proof(I, P),
 	compute_chart_proof_list(Is, Ps, KPs).
 
+% = sort_args(+Arguments, -SortedArguments)
+%
+% true if SortedArguments is the list of chart items Arguments sorted
+% by left to right order; specifically, this means SortedArgument is
+% sorted by increasing rightmost position.
+
 sort_args(As, Ss) :-
 	add_keys(As, Ks0),
 	keysort(Ks0, Ks),
@@ -1473,61 +1656,379 @@ add_keys([I|Is], [K-I|Ks]) :-
 	stored(I, _, K, _, _, _),
 	add_keys(Is, Ks).
 
-transform_proof(P, Q) :-
-	transform_proof(P, 0, _, Q).
 
-transform_proof(rule(e_end, GoalPros, D, [Proof1, Proof2]), N0, N, rule(dr, GoalPros, D, [Proof1, rule(drdiaboxi(I), YZ, dr(0,C,dia(I,box(I,B))), [Proof4])])) :-
-	GoalPros = p(_,X,YZ),
-	ExtrForm = dr(0,D,dr(0,C,dia(I,box(I,B)))),
-	rule_conclusion(Proof1, X, ExtrForm),
-	find_e_start(Proof2, X, ExtrForm, B, N0, Pros, Proof3),
-	global_replace_pros(Proof3, Pros, p(0,Pros,'$VAR'(N0)), Proof4),
-	N is N0 + 1,
-	!.
-transform_proof(rule(Nm, Pros, F, Ds0), N0, N, rule(Nm, Pros, F, Ds)) :-
-	transform_proof_list(Ds0, N0, N, Ds).
+%transform_chart_proof(
+%transform_chart_proof(rule(e_start, Pros, F, [L, rule(R1, Pros, dr(0,F,A), Hs)]), rule(dr, Pros, F)).
 
-transform_proof_list([], N, N, []).
-transform_proof_list([P|Ps], N0, N, [Q|Qs]) :-
-	transform_proof(P, N0, N1, Q),
-	transform_proof_list(Ps, N1, N, Qs).
+% compute_proof and friends are OBSOLETE!
+% to be removed when all useful parts have been incorporated in compute_chart_proof, which replaces
+% this predicate
 
-find_e_start(rule(e_start,Pros,A,[rule(_, X, EF, _), Proof]), X, EF, B, N, Pros, rule(dr,Pros,A,[Proof,rule(axiom,'$VAR'(N),B,[])])) :-
-	!.
-find_e_start(rule(Nm, P, A, Ds0), X, EF, B, N, Pros, rule(Nm, P, A, Ds)) :-
-	find_e_start_list(Ds0, X, EF, B, N, Pros, Ds),
-	!.
-
-
-find_e_start_list([P0|Ps], X, EF, B, N, Pros, [P|Ps]) :-
-	find_e_start(P0, X, EF, B, N, Pros, P).
-find_e_start_list([P|Ps0], X, EF, B, N, Pros, [P|Ps]) :-
-	find_e_start_list(Ps0, X, EF, B, N, Pros, Ps).
-	
-rule_conclusion(rule(_, A, F, _), A, F).
-rule_daughters(rule(_, _, _, Ds), Ds).
-
-global_replace_pros(rule(Nm, P0, F, Ds0), A, B, rule(Nm, P, F, Ds)) :-
-	replace_pros(P0, A, B, P),
-	global_replace_pros_list(Ds0, A, B, Ds).
-
-global_replace_pros_list([], _, _, []).
-global_replace_pros_list([P|Ps], A, B, [Q|Qs]) :-
-	global_replace_pros(P, A, B, Q),
-	global_replace_pros_list(Ps, A, B, Qs).
-
-replace_pros(A, A, B, B) :-
-	!.
-replace_pros(p(I,A0,B0), C, D, p(I,A,B)) :-
+compute_proof1(Index) :-
+	check_proof_stream,
+	check_prolog_proof_stream,
+	check_xml_stream,
+	retractall(proof_index(_)),
+	assert(proof_index(-1)),
+	retractall(proof_index_right(_,_,_)),
+	retractall(proof_hole(_,_,_,_,_)),
+	current_sentence(Sent),
+	justification(Index, Just),
+	Just =.. [Rule|Args],
+	stored(Index, _, L, R, Formula, _),
+	compute_proof(Rule, Args, L, R, _Ant, Formula, Proof),
 	!,
-	replace_pros(A0, C, D, A),
-	replace_pros(B0, C, D, B).
-replace_pros(A, _, _, A).
+	print_proof(Sent, Proof, pl_proof),
+	xml_proof(Sent, Proof, xml),
+%	portray_clause(pl_proof, (proof(Sent, Proof) :- true)),
+	format(proof, '~n\\begin{multline}~n', []),
+	latex_proof(Proof, proof),
+	format(proof, '~n\\end{multline}~2n', []).
+compute_proof1(Index) :-
+    (
+	current_predicate('$CHART_CURRENT'/1)
+    ->
+        '$CHART_CURRENT'(CUR)
+    ;
+        CUR = 1
+    ),
+	format(proof, '~n% FAILED to compute proof for index ~w (~w)~n', [CUR,Index]),
+	format(log, '~nFAILED to compute proof for index ~w (~w)~n', [CUR,Index]),
+	format('~nFAILED to compute proof for index ~w (~w)~n', [CUR,Index]).
+
+compute_proof(axiom, [], L, R, leaf(L,R,W,POS,Lemma), F, rule(ax, leaf(L,R,W,POS,Lemma), F, [])) :-
+	word(W, POS, Lemma, L, R).
+compute_proof(dr, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dr, p(0,I,K,WL,WR), F, [Left,Right])) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+	justification(A, JustA),
+	justification(B, JustB),
+	JustA =.. [RuleA|ArgsA],
+	JustB =.. [RuleB|ArgsB],
+    (
+        I = AL, AR = BL, AR = J, K = BR
+    ->
+        FA = dr(Ind,F,FB),
+        compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
+        compute_proof(RuleB, ArgsB, J, K, WR, FB, Right)
+    ;
+        I = BL, BR = AL, BR = J, K = AR
+    ->
+        FB = dr(Ind,F,FA),
+        compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
+        compute_proof(RuleA, ArgsA, J, K, WR, FA, Right)     
+    ).
+compute_proof(dl, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dl, p(0,I,K,WL,WR), F, [Left,Right])) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+	justification(A, JustA),
+	justification(B, JustB),
+	JustA =.. [RuleA|ArgsA],
+	JustB =.. [RuleB|ArgsB],
+    (
+        I = AL, AR = BL, AR = J, K = BR
+    ->
+        FB = dl(Ind,FA,F),
+        compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
+        compute_proof(RuleB, ArgsB, J, K, WR, FB, Right)
+    ;
+        I = BL, BR = AL, BR = J, K = AR
+    ->
+        FA = dl(Ind,FB,F),
+        compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
+        compute_proof(RuleA, ArgsA, J, K, WR, FA, Right)     
+    ).
+compute_proof(let, [A,B], _I, _K, W, F, Proof) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+    (
+        FA = lit(let)
+    ->
+        F = FB,
+        justification(A, JustA),
+        justification(B, JustB),
+        JustA =.. [RuleA|ArgsA],
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleA, ArgsA, AL, AR, _, FA, _),
+        compute_proof(RuleB, ArgsB, BL, BR, W, F, Proof)
+    ;
+        FB = lit(let)
+    ->
+        F = FA,
+        justification(A, JustA),
+        justification(B, JustB),
+        JustA =.. [RuleA|ArgsA],
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleB, ArgsB, BL, BR, _, FB, _),
+	compute_proof(RuleA, ArgsA, AL, AR, W, F, Proof)
+    ).
+compute_proof(wr, [A,B], I, K, W, F, Proof) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+    (
+        /* A is right of and ajactent to B */
+        BL = I, AR = K, BR = AL, BR = J
+    ->
+        F = FB,
+        justification(A, JustA),
+        justification(B, JustB),
+        JustA =.. [RuleA|ArgsA],
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleA, ArgsA, AL, AR, WA, FA, ProofA),
+        compute_proof(RuleB, ArgsB, BL, BR, W, F, Proof),
+        assert(proof_hole(AL, AR, WA, FA, ProofA))
+    ;
+        AL = I, BR = K, AR = BL, AR = J
+    ->
+        F = FA,
+        justification(A, JustA),
+        justification(B, JustB),
+        JustA =.. [RuleA|ArgsA],
+        JustB =.. [RuleB|ArgsB],
+	compute_proof(RuleA, ArgsA, AL, AR, W, F, Proof),
+        compute_proof(RuleB, ArgsB, BL, BR, WB, FB, ProofB),
+        assert(proof_hole(BL, BR, WB, FB, ProofB))
+    ).
+
+compute_proof(wpop_vp, [A], I, K, W, dl(0,lit(np(N1,N2,N3)),lit(s(S))), rule(dli(VI), W, dl(0,lit(np(N1,N2,N3)),lit(s(S))), [rule(dl, p(0,I,K,hyp(I,I,'$VAR'(VI)),W), lit(s(S)), [rule(dl, p(0,I,K,hyp(I,I,'$VAR'(VI)),WA), lit(s(S)), [rule(hyp(VI), hyp(I,I,'$VAR'(VI)), lit(np(N1,N2,N3)), []),ProofA]), ProofH])])) :-
+	new_proof_index(VI, K, I),
+	stored(A, _, I, K, dl(0,lit(np(N1,N2,N3)),lit(s(S))), _),
+	justification(A, JustA),
+	JustA =.. [RuleA|ArgsA],
+	compute_proof(RuleA, ArgsA, I, K, WA, dl(0,lit(np(N1,N2,N3)),lit(s(S))), ProofA),
+	proof_hole(I0, K0, WB, dl(1,lit(s(S)),lit(s(S))), ProofH),
+	I0 >= I,
+	K0 =< K,
+	insert_pros(WA, I0, K0, WB, W).
+
+compute_proof(wpop_vpi, [A,B], I, K, p(0,I,K,WB,WA), dl(0,lit(np(N1,N2,N3)),lit(s(S))), rule(dli(VI), p(0,I,K,WB,WA), dl(0,lit(np(N1,N2,N3)),lit(s(S))), [rule(dl, p(0,I,K,hyp(I,I,'$VAR'(VI)),p(0,I,K,WB,WA)), lit(s(S)), [rule(dl, p(0,I,K,hyp(I,I,'$VAR'(VI)),WA), lit(s(S)), [rule(hyp(VI), hyp(I,I,'$VAR'(VI)), lit(np(N1,N2,N3)), []),ProofA]), ProofB])])) :-
+	new_proof_index(VI, K, I),
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+    (
+        /* A is right of and ajactent to B, FA = np\s */
+        BL = I, AR = K, BR = AL, BR = J
+    ->
+        FA = dl(0,lit(np(N1,N2,N3)),lit(s(S))),
+        FB = dl(1,lit(s(S)),lit(s(S))),
+        justification(A, JustA),
+        justification(B, JustB),
+        JustA =.. [RuleA|ArgsA],
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleA, ArgsA, AL, AR, WA, FA, ProofA),
+        compute_proof(RuleB, ArgsB, BL, BR, WB, FB, ProofB)
+     ;
+        AL = I, BR = K, AR = BL, AR = J
+    ->
+        FB = dl(0,lit(np(N1,N2,N3)),lit(s(S))),
+        FA = dl(1,lit(s(S)),lit(s(S))),
+        justification(A, JustA),
+        justification(B, JustB),
+        JustA =.. [RuleA|ArgsA],
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleA, ArgsA, AL, AR, WB, FA, ProofB),
+        compute_proof(RuleB, ArgsB, BL, BR, WA, FB, ProofA)
+     ).
+
+compute_proof(wpop, [A], I, K, W, FA, rule(dl, W, FB, [ProofA, ProofH])) :-
+	stored(A, _, I, K, FA, _),
+	justification(A, JustA),
+	JustA =.. [RuleA|ArgsA],
+	compute_proof(RuleA, ArgsA, I, K, WA, FA, ProofA),
+	proof_hole(I0, K0, WB, dl(1,FA,FB), ProofH),
+	I0 >= I,
+	K0 =< K,
+	insert_pros(WA, I0, K0, WB, W).
 
 
-% ==============================================
-% =              chart inferences              =
-% ==============================================
+compute_proof(e_start, [A,B], I, K, p(0, I, K, W, hyp(K,K,'$VAR'(V))), F, rule(dr, p(0,I,K,W,hyp(K,K,'$VAR'(V))), F, [Proof,rule(hyp(V), hyp(K,K,'$VAR'(V)), Arg, [])])) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+    (
+        AL = I, AR = K
+    ->
+        FA = dr(0,F,Arg),
+        BR = Ind,
+	new_proof_index(V, Ind, K),
+        justification(A, JustA),
+        JustA =.. [RuleA|ArgsA],
+        compute_proof(RuleA, ArgsA, I, K, W, FA, Proof)
+    ;
+        BL = I, BR = K
+    ->
+        FB = dr(0,F,Arg),
+        AR = Ind,
+	new_proof_index(V, Ind, K),
+        justification(B, JustB),
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleB, ArgsB, I, K, W, FB, Proof)
+    ).
+
+compute_proof(e_start_l, [A,B], I, K, p(0, I, K, W, hyp(K,K,'$VAR'(V))), F, rule(dr, p(0,I,K,W,hyp(K,K,'$VAR'(V))), F, [Proof,rule(hyp(V), hyp(K,K,'$VAR'(V)), Arg, [])])) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+    (
+        AL = I, AR = K
+    ->
+        FA = dr(0,F,Arg),
+        BR = Ind,
+	new_proof_index(V, Ind, K),
+        justification(A, JustA),
+        JustA =.. [RuleA|ArgsA],
+        compute_proof(RuleA, ArgsA, I, K, W, FA, Proof)
+    ;
+        BL = I, BR = K
+    ->
+        FB = dr(0,F,Arg),
+        AR = Ind,
+	new_proof_index(V, Ind, K),
+        justification(B, JustB),
+        JustB =.. [RuleB|ArgsB],
+        compute_proof(RuleB, ArgsB, I, K, W, FB, Proof)
+    ).
+
+
+compute_proof(e_end, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dr,p(0,I,K,WL,WR), F, [Left,rule(dri(PIJ), WR, FR, [Right])])) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+	justification(A, JustA),
+	justification(B, JustB),
+	JustA =.. [RuleA|ArgsA],
+	JustB =.. [RuleB|ArgsB],
+    (
+        AL = I, AR = BL, AR = J, BR = K
+    ->
+        FR = dr(0,FB,dia(Ind,box(Ind,G))),
+        FA = dr(0,F,FR),
+        compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
+        compute_proof(RuleB, ArgsB, J, K, WR0, FB, Right),
+        proof_index_right(PIJ, J, PI),
+        valid_extraction(Ind, PI, K),
+        retract_hypothesis(PIJ, PI, WR0, WR)
+    ;
+        I = BL, BR = AL, BR = J, K = AR
+     ->
+        FR = dr(0,FA,dia(Ind,box(Ind,G))),
+        FB = dr(0,F,FR),
+        compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
+        compute_proof(RuleA, ArgsA, J, K, WR0, FA, Right),      
+        proof_index_right(PIJ, J, PI),
+        valid_extraction(Ind, PI, K),
+        retract_hypothesis(PIJ, PI, WR0, WR)
+    ).
+
+compute_proof(e_end_l, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dr,p(0,I,K,WL,WR), F, [Left,rule(dri(PIJ), WR, FR, [Right])])) :-
+	stored(A, _, AL, AR, FA, _),
+	stored(B, _, BL, BR, FB, _),
+	justification(A, JustA),
+	justification(B, JustB),
+	JustA =.. [RuleA|ArgsA],
+	JustB =.. [RuleB|ArgsB],
+    (
+        I = BL, BR = AL, BR = J, K = AR
+    ->
+        FR = dr(0,FB,dia(Ind,box(Ind,G))),
+        FA = dl(0,FR,F),
+        compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
+        compute_proof(RuleB, ArgsB, J, K, WR0, FB, Right),
+        proof_index_right(PIJ, J, PI),
+        valid_extraction(Ind, PI, K),
+        retract_hypothesis(PIJ, PI, WR0, WR)
+    ;
+        AL = I, AR = BL, AR = J, BR = K
+     ->
+        FR = dr(0,FA,dia(Ind,box(Ind,G))),
+        FB = dl(0,FR,F),
+        compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
+        compute_proof(RuleA, ArgsA, J, K, WR0, FA, Right),      
+        proof_index_right(PIJ, J, PI),
+        valid_extraction(Ind, PI, I),
+        retract_hypothesis(PIJ, PI, WR0, WR)
+    ).
+
+
+valid_extraction(0, R, R).
+valid_extraction(1, _, _).
+
+
+insert_pros(leaf(L,R,W,P,Lem), LWB, RWB, WB, p(0,L,RWB,leaf(L,R,W,P,Lem),WB)) :-
+	LWB >= R.
+insert_pros(p(0,L,R,A,B), C_L, C_R, C, Inserted) :-
+        left_most(B, B_L),
+     (
+        C_R >= R
+     ->
+        Inserted = p(0,L,C_R,p(0,L,R,A,B),C)
+     ;
+        C_L =< B_L
+     ->
+        Inserted = p(0,L,R,NA,B),
+        insert_pros(A, C_L, C_R, C, NA)
+     ;
+        /* B_L < C_L */
+        Inserted = p(0,L,R,A,NB),
+        insert_pros(B, C_L, C_R, C, NB)
+     ).
+      
+insert_pros(LR0-W, LR, WB, p(0,LR0-W,WB)) :-
+	LR0 =< LR.
+insert_pros(p(0,A0,B0), LWB, WB, Inserted) :-
+	right_most(B0, RB),
+     (
+        LWB >= RB
+    ->
+        Inserted=p(0,p(0,A0,B0),WB)
+     ;
+	right_most(A0, R),
+    (
+        LWB >= R
+    ->
+        Inserted = p(0,p(0,A0,WB),B0)
+    ;
+        LWB < R
+    ->
+        Inserted = p(0,A,B0),
+        insert_pros(A0, LWB, WB, A)
+    ;
+        left_most(B0, L),
+     (
+        LWB < L
+     ->
+        Inserted = p(0,p(0,A0,WB),B0)
+     ;
+        Inserted = p(0,A0,B),
+        insert_pros(B0, LWB, WB, B)
+     ))).
+
+right_most(hyp(_,R,_), R).
+right_most(leaf(_,R,_,_,_), R).
+right_most(p(_,_,R,_,_), R).
+
+left_most(hyp(L,_,_), L).
+left_most(leaf(L,_,_,_,_), L).
+left_most(p(_,L,_,_,_), L).
+
+
+retract_hypothesis(I, R, p(0, _, R, V, hyp(_,R,'$VAR'(I))), V) :-
+	!.
+retract_hypothesis(I, RI, p(0, L, R, V0, W0), Result) :-
+	right_most(V0, VR),
+    (
+        RI =< VR
+    ->
+        Result = p(0, L, R, V, W0),
+        retract_hypothesis(I, RI, V0, V)
+    ;
+        Result = p(0, L, R, V0, W),
+        retract_hypothesis(I, RI, W0, W)
+    ).
+
+
+% END OF OBSOLETE CODE
+
+% =================================
+% =        inference rules        =
+% =================================
 
 % = application rules
 
@@ -1676,13 +2177,13 @@ inference(c_r_lnr, [item(dr(0,_,dl(0,dia(0,box(0,lit(n))),lit(n))), _, I, _),
 inference(prod_e, [item(p(0,dr(0,X,Y),dia(0,box(0,Y))), I, J, data(Pros0,Sem0,Prob,H,SetA,SetB,SetC,SetD))],
 	           item(X, I, J, data(Pros,appl(pi1(Sem0),pi2(Sem0)),Prob,H,SetA,SetB,SetC,SetD)),
 	          [Pros=Pros0]).
-inference(prod_i, [item(X, I, J, data(Pros0,Sem0,Prob0,H0,[],[],SetC0,SetD0)),
-		   item(Y, J, K, data(Pros1,Sem1,Prob1,_H1,[],[],SetC1,SetD1)),
+inference(prod_i, [item(X, I, J, data(Pros0,Sem0,Prob0,H0,SetA0,SetB0,SetC0,SetD0)),
+		   item(Y, J, K, data(Pros1,Sem1,Prob1,_H1,SetA1,SetB1,SetC1,SetD1)),
 		   item(F, I0, J0, _)],
 	           item(p(0,X,Y), I, K, data(Pros,pair(Sem0,Sem1), Prob, H0, SetA, SetB, SetC, SetD)),
 	          [Pros=p(0,Pros0,Pros1),
 		   prod_formula(F,p(0,X,Y), I0, J0, I, K),
-		   combine_sets([], [], SetC0, SetD0, [], [], SetC1, SetD1, SetA, SetB, SetC, SetD),
+		   combine_sets(SetA0, SetB0, SetC0, SetD0, SetA1, SetB1, SetC1, SetD1, SetA, SetB, SetC, SetD),
 		   combine_probability(Prob0, Prob1, I, K, prod_i, Prob)]).
 inference(prod_i3, [item(X, I, J, data(Pros0,Sem0,Prob0,H0,SetA0,SetB0,SetC0,SetD0)),
 		    item(Y, J, K, data(Pros1,Sem1,Prob1,_H1,SetA1,SetB1,SetC1,SetD1)),
@@ -1730,7 +2231,7 @@ inference(ef_start_iv, [item(dr(0,_,dr(0,_,dia(Ind,box(Ind,dl(0,lit(np(A,B,C)),l
 			item(lit(np(A,B,C)), I, J, Data0)],
 		        item(lit(s(S)), I, J, Data),
 		       [K=<I,start_extraction(dl(0,lit(np(A,B,C)),lit(s(S))), J, K, Data0, Data)]).
-% easy case:
+% easy gapping case:
 inference(gap_i, [item(dl(0,dr(0,lit(s(S)),dia(Ind,box(Ind,X))),dr(0,lit(s(S)),box(Ind,dia(Ind,X)))), K0, K, Data0),
 		  item(X, I, J, Data1),
 		  item(lit(s(S)), I0, K0, Data2)],
@@ -1746,12 +2247,6 @@ inference(gap_e, [item(dl(0,dr(0,lit(s(S)),dia(Ind,box(Ind,dr(0,X,Y)))),dr(0,lit
 		  item(X, I, J, data(Pros0,Sem,Prob,H,As,Bs,SetCs0,Ds))],
 	          item(dr(0,X,Y), I, J, data(Pros,lambda(V,Sem),Prob,H,As,Bs,SetCs,Ds)),
 	         [J=<K,Pros0=Pros,select(0-t(Y,J,V), SetCs0, SetCs)]).
-
-% ==============================================
-% =            auxiliary predicates            =
-% ==============================================
-
-% These predicates verify side conditions on the different inference rules
 
 combine_gap(I, J, data(_, Term0, _, _, _, _, _, _),
 	          data(Pros1, Term1, Prob1, _, As1, Bs1, Cs1, Ds1),
@@ -1793,12 +2288,6 @@ is_clitic(cl_y).
 parenthetical(J) :-
 	let_right(J).
 
-interpunction(ponct-pun:cit).
-interpunction(ponct-pun).
-interpunction(ponct).
-interpunction(pun).
-interpunction(pun:cit).
-
 assert_if_verb(Pos, Index) :-
     (
 	is_verb(Pos)
@@ -1833,15 +2322,19 @@ is_clitic(se, clr-pro:per).
 is_clitic(me, clo-pro:per).
 is_clitic(me, pro:per).
 
-assert_if_let(Pos, Index) :-
+assert_if_interpunction(Pos, Index) :-
     (
-        is_let(Pos)
+        interpunction(Pos)
     ->
         assert(let_right(Index))
     ;
         true
     ).
 
+
+% = is_verb(POS)
+%
+% true if the POS tag is one of the ones used for verbs in either the TreeTagger or the Melt tagset.
 
 is_verb(V-ver:_) :-
 	is_verb(V).
@@ -1853,11 +2346,15 @@ is_verb(vinf).
 is_verb(vs).
 is_verb(vimp).
 
-is_let(ponct-pun:cit).
-is_let(ponct-pun).
-is_let(pun:cit).
-is_let(pun).
-is_let(ponct).
+% = is_let(POS)
+%
+% true if POS is a punctuation symbol in either the TreeTagger or the Melt tagset.
+
+interpunction(ponct-pun:cit).
+interpunction(ponct-pun).
+interpunction(ponct).
+interpunction(pun).
+interpunction(pun:cit).
 
 % = prod_formula
 %
@@ -1964,8 +2461,9 @@ check_islands(dl(0,lit(np(_,_,_)),lit(s(S))), Data) :-
 	check_islands1(As).
 check_islands(lit(n), Data) :-
 	!,
-	Data = data(_, _, _, _, As, [], _, _),
-	check_islands1(As).
+	Data = data(_, _, _, _, As, Bs, _, _),
+	check_islands1(As),
+	check_islands1(Bs).
 check_islands(lit(np(_,_,_)), Data) :-
 	!,
 	Data = data(_, _, _, _, _, [], _, _).
@@ -2061,6 +2559,9 @@ has_empty_stack(data(_, _, _, _, [], [], [], [])).
 
 
 % = combine_sets
+%
+% combine the different stacks from two chart items and check if the result is coherent.
+% this predicate is call from most binary rules.
 
 combine_sets(SetA0, SetB0, SetC0, SetD0, SetA1, SetB1, SetC1, SetD1, SetA, SetB, SetC, SetD) :-
 	join_sets(SetA0, SetA1, SetA),
@@ -2132,19 +2633,19 @@ dit_np(I, K, data(Pros1, Sem1, Prob1, H, SetA0, SetB0, SetC0, SetD0),
 % incidental adverbs have wide scope and more permissive positions; they are pushed onto stack A
 
 wrap(dl(1,V,W), I, J, K, data(Pros1, Sem, Prob1, H0, SetA0, SetB0, SetC0, SetD0),
-                      data(Pros2, Sem2, Prob2, _H1, [], [], SetC1, SetD1),
-                      data(p(1,Pros1,Pros2), Sem, Prob, H0, SetA, SetB, SetC, SetD)) :-
+                      data(Pros2, Sem2, Prob2, _H1, SetA1, SetB1, SetC1, SetD1),
+                      data(p(1,Pros1,Pros2), Sem, Prob, H0, [t(J,K,dl(1,V,W),Sem2)|SetA], SetB, SetC, SetD)) :-
 	combine_probability(Prob1, Prob2, I, K, wrap, Prob),
-	combine_sets([t(J,K,dl(1,V,W),Sem2)|SetA0], SetB0, SetC0, SetD0, [], [], SetC1, SetD1, SetA, SetB, SetC, SetD).
+	combine_sets(SetA0, SetB0, SetC0, SetD0, SetA1, SetB1, SetC1, SetD1, SetA, SetB, SetC, SetD).
 
 % integrated adverbs have local and narrow scope (wrt. the incidental adverbs); they can occur more or less
 % freely among the verb arguments but not elsewhere and are pused onto stack B
 
 wrap_arg(dl(1,V,W), I, J, K, data(Pros1, Sem, Prob1, H0, SetA0, SetB0, SetC0, SetD0),
-                      data(Pros2, Sem2, Prob2, _H1, [], [], SetC1, SetD1),
-                      data(p(1,Pros1,Pros2), Sem, Prob, H0, SetA, SetB, SetC, SetD)) :-
+                      data(Pros2, Sem2, Prob2, _H1, SetA1, SetB1, SetC1, SetD1),
+                      data(p(1,Pros1,Pros2), Sem, Prob, H0, SetA, [t(J,K,dl(1,V,W),Sem2)|SetB], SetC, SetD)) :-
 	combine_probability(Prob1, Prob2, I, K, wrap_arg, Prob),
-	combine_sets(SetA0, [t(J,K,dl(1,V,W),Sem2)|SetB0], SetC0, SetD0, [], [], SetC1, SetD1, SetA, SetB, SetC, SetD).
+	combine_sets(SetA0, SetB0, SetC0, SetD0, SetA1, SetB1, SetC1, SetD1, SetA, SetB, SetC, SetD).
 
 % only wrap from the incidental adverbs stack when there are no integrated adverbs (with net result that
 % incidental adverbs outscope integrated adverbs, as they should)
@@ -2269,6 +2770,10 @@ print_stacks(data(_,_,_,_,As,Bs,Cs,Ds)) :-
 create_data(Pros, _Form, Lemma, Sem, Prob, _I, _J, data(Pros, Sem, Weight, Lemma, [], [], [], [])) :-
 	compute_weight(Prob, Weight).
 
+% = simplify_formula(+Formula, -SimpleFormula)
+%
+% true if SimpleFormula is a simplified version of formula. This erases all internal structure from atoms.
+% pp(de) becomes pp, s(inf(par)) become s, etc.
 
 simplify_formula(X, X) :-
 	var(X),
@@ -2291,12 +2796,7 @@ simplify_formula(dia(_,A0), dia(1,A)) :-
 simplify_formula(box(_,A0), box(1,A)) :-
 	simplify_formula(A0, A).
 
-
-% ==============================================
-% =           ordered set predicates           =
-% ==============================================
-
-% variants of predicates from ordset.pl
+% variants of differentKey-Val ordered set predicates 
 
 % = ord_key_insert_i(+OrdSet, +Key, +Data, -OrdSet)
 %
@@ -2538,11 +3038,6 @@ shell_warn(Cmd) :-
         format(user_err, '{Warning: Shell command failed "~w"}~n', [Cmd])
     ).
 
-
-% ==============================================
-% =               pretty-printing              =
-% ==============================================
-
 user:portray(lit(np(A,_,_))) :-
 	!,
     (
@@ -2608,10 +3103,6 @@ user:portray(t(I,J,F,_V)) :-
 	!,
 	format('~w-~w ~p', [I,J,F]).
 
-% ==============================================
-% =              output XML proof              =
-% ==============================================
-
 xml_proof(Index, Proof, Stream) :-
 	format(Stream, '<?xml version="1.0" encoding="UTF-8"?>~n', []),
 	numbervars(Proof, 0, _),
@@ -2643,8 +3134,6 @@ print_pros_xml(Atom, Stream) :-
 	atomic(Atom),
 	!,
 	print_pros_xml1(Atom, Stream).
-print_pros_xml('$VAR'(N), Stream) :-
-	format(Stream, 'p~w', [N]).
 print_pros_xml(L-R, Stream) :-
 	format(Stream, '~w-~w', [L,R]).
 print_pros_xml(leaf(_,_,Pros,_,_), Stream) :-
@@ -2684,12 +3173,6 @@ xml_codes([C|Cs], Ds0) :-
          Ds0 = [C|Ds]
      ),
          xml_codes(Cs, Ds).
-
-
-% ==============================================
-% =            output Prolog proof             =
-% ==============================================
-
 
 print_proof(Index, Proof, Stream) :-
 	numbervars(Proof, 0, _),
@@ -2750,8 +3233,6 @@ print_pros(p(_,L,R), Stream) :-
 reduce_pros(Atom, Atom) :-
 	atomic(Atom),
 	!.
-reduce_pros('$VAR'(N), Atom) :-
-	atomic_concat(p, N, Atom).
 reduce_pros(L-R, L-R).
 reduce_pros(p(I,L,R), p(I,L,R)).
 reduce_pros(hyp(_,_,Pros), Pros).
@@ -2760,15 +3241,7 @@ reduce_pros(p(I,_,_,L0,R0), p(I,L,R)) :-
 	reduce_pros(L0, L),
 	reduce_pros(R0, R).
 
-
-% ==============================================
-% =             interactive parser             =
-% ==============================================
-
-% interactive chart parser, requires communication (in utf-8!) 
-% between SWI Prolog and TclTk
-
-grail_gui :-
+gui :-
 	repeat,
 	/* start main loop, tell Tk we are in the INIT state, that is done processing the
 	   previous command and waiting for new input */
@@ -2948,186 +3421,6 @@ update_state(Active, N) :-
         true
    ),
 	assert(state(choose_active, [Active, N])).       
-
-
-% = interactive_parse(+ActiveFormulas, -Semantics)
-
-interactive_parse([], drs([],[])).
-interactive_parse([A|As], Sem) :-
-	add_axioms_to_chart([A|As], 0, N, Active),
-	interactive_parse1(Active, N),
-	check_solution(Sem).
-
-interactive_parse1(Active0, N0) :-
-    (
-        Active0 = [_]
-    ->
-        true
-    ;
-        nl,
-        portray_active(Active0),
-	interactive_rule(Active0, Active, N0, N),
-	interactive_parse1(Active, N)
-    ).
-
-portray_active([]).
-portray_active([A|As]) :-
-	stored(A,_B,C,D,E,data(Pros,_,W,_,L1,L2,L3,L4)),
-	!,
-    (
-        L1 = [], L2 = [], L3 = [], L4 = []
-    ->
-     	format('~t~w~3| ~t~w~3+-~w~t~3+~t~p~3+ ~p~t~36+ ~p~n', [A,C,D,W,E,Pros])
-    ;
-	format('~t~w~3| ~t~w~3+-~w~t~3+~t~p~3+ ~p~t~36+ ~p ~p ~p ~p ~p~n', [A,C,D,W,E,Pros,L1,L2,L3,L4])
-     ),
-	portray_active(As).
-
-portray_chart(N) :-
-	findall(stored(A,B,C,D,E,F), stored(A,B,C,D,E,F), List),
-	portray_chart(List, 0, N).
-
-interactive_rule(Active0, Active, N0, N) :-
-	read_potential_trigger(Active0, Consequences),
-	length(Consequences, L),
-   (
-        L = 1
-   ->
-        /* single rule application possible */
-        Consequences = [_-(Item-Just)]
-   ;
-        /* multiple rules possible, ask user */
-	portray_numbered_list(Consequences, 0),
-	read_integer(Cnsq, L),
-	nth0(Cnsq, Consequences, _-(Item-Just))
-   ),
-	apply_rule(Item, Just, Active0, Active, N0, N).
-
-apply_rule(Item, Just, Active0, Active, N0, N) :-
-	Just =.. [R|Args0],
-	sort(Args0,Args),
-	subtract_premisses(R, Args, Active0, Active1),
-	ord_insert(Active1, N0, Active),
-	N is N0 + 1,
-	add_item_to_agenda(Item, Just, queue(N0,N0), _).
-
-subtract_premisses(e_start_l, [A,B], Active0, Active) :-
-	!,
-    (
-	stored(A, _, _, _, dl(0,dr(0,_,dia(Ind,box(Ind,_))),_), _)
-    ->
-        ord_delete(Active0, B, Active)
-    ;
-        ord_delete(Active0, A, Active)
-    ).
-subtract_premisses(e_start, [A,B], Active0, Active) :-
-	!,
-    (
-	stored(A, _, _, _, dr(0,_,dr(0,_,dia(Ind,box(Ind,_)))), _)
-    ->
-        ord_delete(Active0, B, Active)
-    ;
-        ord_delete(Active0, A, Active)
-    ).
-subtract_premisses(ef_start, [A,B], Active0, Active) :-
-	!,
-    (
-	stored(A, _, _, _, dr(0,_,dr(0,_,dia(Ind,box(Ind,_)))), _)
-    ->
-        ord_delete(Active0, B, Active)
-    ;
-        ord_delete(Active0, A, Active)
-    ).
-subtract_premisses(ef_start_iv, [A,B], Active0, Active) :-
-	!,
-    (
-	stored(A, _, _, _, dr(0,_,dr(0,_,dia(Ind,box(Ind,_)))), _)
-    ->
-        ord_delete(Active0, B, Active)
-    ;
-        ord_delete(Active0, A, Active)
-    ).
-subtract_premisses(gap_i, [A,B,C], Active0, Active) :-
-        select(D, [A,B,C], R0),
-        stored(D, _, _, _, dl(0,dr(0,lit(s(S)),dia(Ind,box(Ind,X))),dr(0,lit(s(S)),box(Ind,dia(Ind,X)))), _),
-        select(E, R0, [F]),
-        stored(E, _, _, _, X, _),
-	!,
-	ord_delete(Active0, D, Active1),
-	ord_delete(Active1, F, Active).
-subtract_premisses(gap_c, _, Active, Active).
-subtract_premisses(gap_e, [A,B], Active0, Active) :-
-	select(D, [A,B], [E]),
-	stored(D, _, _, _, dl(0,dr(0,lit(s(S)),dia(Ind,box(Ind,dr(0,X,Y)))),dr(0,lit(s(S)),box(Ind,dia(Ind,dr(0,X,Y))))), _),
-	stored(E, _, _, _, X, _),
-	!,
-	ord_delete(Active0, E, Active).
-
-subtract_premisses(_, Ps, As0, As) :-
-	ord_subtract(As0, Ps, As).
-
-portray_numbered_list([], _).
-portray_numbered_list([A|As], N0) :-
-	format('~w. ~p~n', [N0,A]),
-	N is N0 + 1,
-	portray_numbered_list(As, N).
-
-read_potential_trigger(Active, Consequences) :-
-	read_integer_from_list(Input0, Active0, _Active1),
-	find_all_consequences1(Input0, Consequences0, Active0),
-    (
-        Consequences0 = []
-    ->
-        format('No rule application possible, select another trigger!~n', []),
-        read_potential_trigger(Active, Consequences)
-    ;
-        Consequences = Consequences0
-    ).
-	
-read_integer_from_list(Input, List0, List) :-
-	robust_read(Input0),
-    (
-        integer(Input0),
-        select(Input0, List0, List)
-    ->
-        Input = Input0
-    ;
-        Input0 = a
-    ->
-        format('Aborted!~n', []),
-        fail
-    ;
-        Input0 = abort
-    ->
-        format('Aborted!~n', []),
-        fail
-    ;
-        format('Input an integer from ~w (or type "a." to abort)~n', [List0]),
-        read_integer_from_list(Input, List0, List)
-    ).
-    
-read_integer(Input, N) :-
-	robust_read(Input0),
-    (
-	integer(Input0),
-        Input0 >= 0,
-        Input0 =< N
-    ->
-        Input = Input0
-    ;
-        write('Input an integer between 0 and ~w', [N]),
-        read_integer(Input, N)
-    ).
-
-robust_read(Input) :-
-	catch(read(Input), E, print_message(error, E)),
-    (
-        var(Input)
-    ->
-        robust_read(Input)
-    ;
-        true
-    ).
 
 
 write_list([]) :-
@@ -3350,67 +3643,6 @@ flatten_pros(dia(_,A)) -->
 	flatten_pros(A).
 flatten_pros(A) -->
 	[A].
-
-
-% ==============================================
-% =              output the chart              =
-% ==============================================
-
-% = print_chart(+SentNo)
-%
-% output the chart contexts to a GraphViz file
-
-print_chart(SentNo) :-
-	concat_atom(['chart',SentNo,'.dot'], FileName),
-	open(FileName, write, Stream),
-	print_chart1(Stream),
-	close(Stream).
-print_chart1(Stream) :-
-	format(Stream, 'digraph "chart" {~n', []),
-	stored(_, _, I, J, F, _),
-	format(Stream, '~w -> ~w [label="~p"]~n', [I,J,F]),
-	fail.
-print_chart1(Stream) :-
-	format(Stream, '}~n', []).
-
-
-% = export_raw
-%
-% exports chart contents to the file 'stored.txt'
-
-export_raw :-
-	shell('rm stored.txt', _),
-	tell('stored.txt'),
-	listing(stored),
-	listing(justification),
-	told.
-
-% = export_stored
-%
-% as export_raw, but reconstructs the full prosodic label for all chart items.
-
-export_stored :-
-	shell('rm stored.txt', _),
-	tell('stored.txt'),
-	export_stored1,
-	listing(justification),
-	told.
-
-export_stored1 :-
-	stored(Index, Key, L, R, F, Data0),
-	justification(Index, Just),
-	Just =.. [_|Args],
-	expand_data(Data0, Args, Data),
-	portray_clause(stored(Index, Key, L, R, F, Data)),
-	fail.
-export_stored1.
-
-
-% ==============================================
-% =               initialization               =
-% ==============================================
-
-% automatic initialization of rule counts
 
 compute_rule_counts_init :-
 	retractall(rule_counts_init(_)),

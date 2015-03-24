@@ -1,1 +1,7 @@
 .DS_Store	grammars.tgz	Makefile
+*~
+# ignore LaTeX files
+source/a.out
+source/semantics.*
+source/sentences.*
+source/grammar.*
