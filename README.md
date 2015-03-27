@@ -108,7 +108,9 @@ modification of the code to use first argument indexing as much as
 possible, in addition to any errors this may have produced.
 
 The (experimental) `chart.pl` chart parser library is an adaptation of code
-from the following article.
+from the following article (see
+[Grail Light](https://github.com/RichardMoot/GrailLight) for a
+type-logical chart parser).
 
   Stuart M. Shieber, Yves Schabes and Fernando C. N. Pereira (1995) 
   *`Principles and Implementation of Deductive Parsing'*, Journal of Logic
