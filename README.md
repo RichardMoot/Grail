@@ -6,7 +6,7 @@ Copyright :copyright: 2003-2015 Richard Moot (Richard.Moot@labri.fr)
 
 Copyright :copyright: 2004-2015 CNRS         (http://www.cnrs.fr)
 
-Copyright :copyright 2003-2011 INRIA        (http://www.inria.fr)
+Copyright :copyright: 2003-2011 INRIA        (http://www.inria.fr)
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -111,6 +111,6 @@ The (experimental) `chart.pl` chart parser library is an adaptation of code
 from the following article.
 
   Stuart M. Shieber, Yves Schabes and Fernando C. N. Pereira (1995) 
-  `Principles and Implementation of Deductive Parsing', Journal of Logic
-  Programming 24(1-2):3-36
+  *`Principles and Implementation of Deductive Parsing'*, Journal of Logic
+  Programming **24(1-2)**:3-36
 
