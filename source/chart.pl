@@ -831,13 +831,13 @@ compute_proof(dr, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dr, p(0,I,K,WL,WR), F, [L
     (
         I = AL, AR = BL, AR = J, K = BR
     ->
-        FA = dr(Ind,F,FB),
+        FA = dr(_,F,FB),
         compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
         compute_proof(RuleB, ArgsB, J, K, WR, FB, Right)
     ;
         I = BL, BR = AL, BR = J, K = AR
     ->
-        FB = dr(Ind,F,FA),
+        FB = dr(_,F,FA),
         compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
         compute_proof(RuleA, ArgsA, J, K, WR, FA, Right)     
     ).
@@ -851,13 +851,13 @@ compute_proof(dl, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dl, p(0,I,K,WL,WR), F, [L
     (
         I = AL, AR = BL, AR = J, K = BR
     ->
-        FB = dl(Ind,FA,F),
+        FB = dl(_,FA,F),
         compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
         compute_proof(RuleB, ArgsB, J, K, WR, FB, Right)
     ;
         I = BL, BR = AL, BR = J, K = AR
     ->
-        FA = dl(Ind,FB,F),
+        FA = dl(_,FB,F),
         compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
         compute_proof(RuleA, ArgsA, J, K, WR, FA, Right)     
     ).
@@ -890,7 +890,7 @@ compute_proof(wr, [A,B], I, K, W, F, Proof) :-
 	stored(B, _, BL, BR, FB, _),
     (
         /* A is right of and ajactent to B */
-        BL = I, AR = K, BR = AL, BR = J
+        BL = I, AR = K, BR = AL %, BR = J
     ->
         F = FB,
         justification(A, JustA),
@@ -901,7 +901,7 @@ compute_proof(wr, [A,B], I, K, W, F, Proof) :-
         compute_proof(RuleB, ArgsB, BL, BR, W, F, Proof),
         assert(proof_hole(AL, AR, WA, FA, ProofA))
     ;
-        AL = I, BR = K, AR = BL, AR = J
+        AL = I, BR = K, AR = BL %, AR = J
     ->
         F = FA,
         justification(A, JustA),
@@ -967,7 +967,7 @@ compute_proof(e_end, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dr,p(0,I,K,WL,WR), F, 
     (
         AL = I, AR = BL, AR = J, BR = K
     ->
-        FR = dr(0,FB,dia(Ind,box(Ind,G))),
+        FR = dr(0,FB,dia(Ind,box(Ind,_))),
         FA = dr(0,F,FR),
         compute_proof(RuleA, ArgsA, I, J, WL, FA, Left),
         compute_proof(RuleB, ArgsB, J, K, WR0, FB, Right),
@@ -977,7 +977,7 @@ compute_proof(e_end, [A,B], I, K, p(0,I,K,WL,WR), F, rule(dr,p(0,I,K,WL,WR), F, 
     ;
         I = BL, BR = AL, BR = J, K = AR
      ->
-        FR = dr(0,FA,dia(Ind,box(Ind,G))),
+        FR = dr(0,FA,dia(Ind,box(Ind,_))),
         FB = dr(0,F,FR),
         compute_proof(RuleB, ArgsB, I, J, WL, FB, Left),
         compute_proof(RuleA, ArgsA, J, K, WR0, FA, Right),      

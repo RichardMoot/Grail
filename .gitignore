@@ -5,3 +5,12 @@ source/a.out
 source/semantics.*
 source/sentences.*
 source/grammar.*
+source/grail_log
+source/before.dot
+source/after.dot
+source/grail_log
+source/linking.dot
+source/lookup.dot
+source/texlog
+source/previous_semantics.pl
+source/tmp.dot
