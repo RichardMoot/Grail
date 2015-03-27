@@ -2043,13 +2043,11 @@ default_semantics(venir, ver:TIME, dr(_,dl(_,lit(np(_,_,_)),lit(s(_))),dl(_,lit(
       ;
         tense_aspect(drs)
       ->
-        RefTime = ref_time,
         Events = Events0,
         Pred = Pred0
       ;
-        RefTime = appl(temps,E1),
         Events = [event(E1)|Events0],
-        Pred = Pred0
+        Pred = [appl(temps,E1)|Pred0]
       ).
 
 % = aller + inf
