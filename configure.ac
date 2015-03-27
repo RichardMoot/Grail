@@ -55,5 +55,5 @@ AC_SUBST(prefix)
 AC_SUBST(exec_prefix)
 AC_SUBST(bindir)
 
-AC_CONFIG_FILES([Makefile source/insertdot source/g3 source/chart_var.pl])
+AC_CONFIG_FILES([Makefile source/insertdot source/g3])
 AC_OUTPUT

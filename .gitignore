@@ -1,5 +1,8 @@
 .DS_Store	grammars.tgz	Makefile
 *~
+autom4te.cache/*
+config.log
+config.status
 # ignore LaTeX files
 source/a.out
 source/semantics.*

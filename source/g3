@@ -5,8 +5,8 @@
 % =====================
 
 % Grail 3.1.3 Type-Logical Theorem Prover
-% Copyright (C) 2003-2013 Richard Moot (Richard.Moot@labri.fr)
-% Copyright (C) 2004-2013 CNRS         (http://www.cnrs.fr)
+% Copyright (C) 2003-2015 Richard Moot (Richard.Moot@labri.fr)
+% Copyright (C) 2004-2015 CNRS         (http://www.cnrs.fr)
 % Copyright (C) 2003-2011 INRIA        (http://www.inria.fr)
 
 % This library is free software; you can redistribute it and/or
@@ -39,7 +39,7 @@
 
 % = directory where the xpce images are stored.
 
-:- pce_image_directory('/Users/moot/grailexec/share/Grail').
+:- pce_image_directory('@graildatadir@').
 
 % = load predicates from the different modules.
 
@@ -222,7 +222,7 @@ xpce_html.
 
 welcome :- 
 	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail 3.1.3']),
-	format('Release: 5 July 2013 (12:42:14 CEST)~n', []).
+	format('Release: 27 March 2015 (13:50:49 CET)~n', []).
 
 start :-
 	welcome,
@@ -756,7 +756,7 @@ open_semantics_files :-
 % ===================================================================
 
 producing_postscript :-
-	'/usr/bin/open' \== 'NULL'.
+	'NULL' \== 'NULL'.
 
 new_postscript_window(0, _).
 new_postscript_window(1, File) :-
@@ -768,7 +768,7 @@ new_postscript_window(File) :-
     (
 	PId == child
     ->
-	concat_atom(['/usr/bin/open -watch ', File, '.ps'], Cmd),
+	concat_atom(['NULL -watch ', File, '.ps'], Cmd),
 	shell_warn(Cmd)
     ;
 	assert('$PS'(PId))
@@ -789,12 +789,12 @@ refresh_ps_file(1) :-
 	delete_file_if_exists('tmp.ps').
 
 default_image :-
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps tmp.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot tmp.dot'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps structural_rules.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot structural_rules.dot'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps lookup.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot lookup.dot').
+	shell_warn('cp @graildatadir@/grail3.ps tmp.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot tmp.dot'),
+	shell_warn('cp @graildatadir@/grail3.ps structural_rules.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot structural_rules.dot'),
+	shell_warn('cp @graildatadir@/grail3.ps lookup.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot lookup.dot').
 
 % ===================================================================
 % =                      LaTeX and Pdf Windows                      =
@@ -804,14 +804,14 @@ open_semantics_window :-
     (
 	producing_pdf
     ->
-        shell_warn('/usr/bin/open semantics.pdf >> texlog &')
+        shell_warn('NULL semantics.pdf >> texlog &')
     ;
 	true
     ).
 
 producing_pdf :-
 	'/usr/texbin/pdflatex' \== 'NULL',
-	'/usr/bin/open' \== 'NULL'.
+	'NULL' \== 'NULL'.
 
 
 % ==========================
@@ -823,7 +823,7 @@ open_latex_structural_rules_window :-
 	producing_pdf
     ->
 	latex_structural_rules_wait,
-        shell_warn('/usr/bin/open postulates.pdf >> texlog &')
+        shell_warn('NULL postulates.pdf >> texlog &')
     ;
 	true
     ).
@@ -942,7 +942,7 @@ open_latex_lexicon_window :-
 	producing_pdf
     ->
 	latex_lexicon_wait,
-        shell_warn('/usr/bin/open lexicon.pdf >> texlog &')
+        shell_warn('NULL lexicon.pdf >> texlog &')
     ;
 	true
     ).
@@ -1042,7 +1042,7 @@ open_latex_grammar_window :-
 	producing_pdf
     ->
 	latex_grammar_wait,
-        shell_warn('/usr/bin/open grammar.pdf >> texlog &')
+        shell_warn('NULL grammar.pdf >> texlog &')
     ;
 	true
     ).
@@ -1084,7 +1084,7 @@ open_latex_sentences_window :-
 	producing_pdf
     ->
 	latex_sentences_wait,
-        shell_warn('/usr/bin/open sentences.pdf >> texlog &')
+        shell_warn('NULL sentences.pdf >> texlog &')
     ;
 	true
     ).
@@ -1127,7 +1127,7 @@ latex_sentences(Stream) :-
 create_help_window(H) :-
 	xpce_html,
 	!,
-	new(H, doc_window('file:///Users/moot/grailexec/share/Grail/help.html')).
+	new(H, doc_window('file://@graildatadir@/help.html')).
 create_help_window(_).
 	
 open_help_window :-
@@ -1141,7 +1141,7 @@ about_grail :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, top).
 about_grail.
 	
@@ -1149,7 +1149,7 @@ about_tlg :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, tlg).
 about_tlg.
 
@@ -1157,7 +1157,7 @@ about_design :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, design).
 about_design.
 
@@ -1165,7 +1165,7 @@ about_parsing :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, parsing).
 about_parsing.
 
@@ -1820,7 +1820,7 @@ append_postscript_file(Prefix, Num) :-
     ->
 	/* if tclsh is installed, use it to insert the new postscript */
         /* file into the old one. */
-        concat_atom(['/Users/moot/grailexec/bin/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
+        concat_atom(['@grailbindir@/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
 		     '/bin/mv tmp2.ps tmp.ps'], CommandTclsh),
 	shell_warn(CommandTclsh)
     ;
@@ -1939,7 +1939,7 @@ open_latex_examples_window :-
 	producing_pdf
     ->
 	parse_all_examples,
-        shell_warn('/usr/bin/open semantics.pdf >> texlog &')
+        shell_warn('NULL semantics.pdf >> texlog &')
     ;
 	true
     ).

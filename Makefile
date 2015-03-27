@@ -2,8 +2,8 @@
 prefix      = /Users/moot/grailexec
 exec_prefix = ${prefix}
 bindir      = ${exec_prefix}/bin
-datarootdir = @datarootdir@
-datadir     = ${prefix}/share/Grail
+datarootdir = ${prefix}/share
+datadir     = ${datarootdir}/Grail
 
 execfiles   = source/insertdot source/g3
 resources   = resources/help.html resources/grail3.ps resources/grail3.dot
@@ -28,7 +28,7 @@ grammarfiles = grammars/dutch.html grammars/engproncase1.pl \
                grammars/README grammars/LICENSE
 
 package_version = 3.2.0
-grail_year = 2013
+grail_year = 2015
 
 rel_date := $(shell date +"%e %B %Y (%H:%M:%S %Z)" | tr -s " " | sed 's/^[ ]//g')
 swi_version := $(shell swipl -v)
