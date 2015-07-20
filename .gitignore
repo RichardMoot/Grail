@@ -17,3 +17,11 @@ source/lookup.dot
 source/texlog
 source/previous_semantics.pl
 source/tmp.dot
+source/tred.dot
+source/deriv.dot
+source/equiv.dot
+source/chart_var.pl
+source/chart_var_lp.pl
+source/chart_var_cr.pl
+source/structural_rules.*
+source/tmp.ps

@@ -1723,7 +1723,7 @@ else
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in path=$PATH$PATH_SEPARATOR/opt/local/bin
+for as_dir in path=$PATH$PATH_SEPARATOR/Applications/SWI-Prolog.app/Contents/MacOS$PATH_SEPARATOR/opt/local/bin
 do
   IFS=$as_save_IFS
   test -z "$as_dir" && as_dir=.
@@ -1765,7 +1765,7 @@ else
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in path=$PATH$PATH_SEPARATOR/opt/local/bin
+for as_dir in path=/Applications/SWI-Prolog.app/Contents/MacOS$PATH_SEPARATOR/opt/local/bin$PATH_SEPARATOR$PATH
 do
   IFS=$as_save_IFS
   test -z "$as_dir" && as_dir=.

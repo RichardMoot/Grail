@@ -15,9 +15,9 @@ else
 fi
 
 dnl Check for SWI Prolog/XPCE
-AC_PATH_PROG(XPCE, [xpce], NULL, [path=$PATH$PATH_SEPARATOR/opt/local/bin])
+AC_PATH_PROG(XPCE, [xpce], NULL, [path=$PATH$PATH_SEPARATOR/Applications/SWI-Prolog.app/Contents/MacOS$PATH_SEPARATOR/opt/local/bin])
 AC_SUBST(XPCE)
-AC_PATH_PROG(SWIPL, [swipl], NULL, [path=$PATH$PATH_SEPARATOR/opt/local/bin])
+AC_PATH_PROG(SWIPL, [swipl], NULL, [path=/Applications/SWI-Prolog.app/Contents/MacOS$PATH_SEPARATOR/opt/local/bin$PATH_SEPARATOR$PATH])
 AC_SUBST(SWIPL)
 
 dnl Check for Tclsh

@@ -86,7 +86,7 @@ unary_derivations(N, E) :-
 %	vertices_edges_to_ugraph([], L, Gr0),
 %	reduce(Gr0, Gr),
 	length(M, LenR),
-	print_graph(M),
+	write(M),
 	format('Reduced : ~w~n', [LenR]).
 
 % = elim_equiv(+In, -Out, -Equi)

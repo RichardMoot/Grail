@@ -2568,7 +2568,7 @@ shell_warn(Cmd) :-
     ->
         true
     ;
-        format(user_err, '{Warning: Shell command failed "~w"}~n', [Cmd])
+        format(user_error, '{Warning: Shell command failed "~w"}~n', [Cmd])
     ).
 
 

@@ -271,7 +271,7 @@ shell_warn(Cmd) :-
     ->
         true
     ;
-        format(user_err, '{Warning: Shell command failed "~w"}~n', [Cmd])
+        format(user_error, '{Warning: Shell command failed "~w"}~n', [Cmd])
     ).
      
 % ===================================================================
@@ -4739,7 +4739,11 @@ new_output_file(File, Alias) :-
         delete_file_if_exists(File),
 	catch(open(File, update, _, [alias(Alias),buffer(line)]),
 	      _, 
-	      open_null_stream(Alias)).
+	      open_null_alias(Alias)).
+
+open_null_alias(Alias) :-
+        open_null_stream(Stream),
+	stream_property(Stream, alias(Alias)).
 
 delete_file_if_exists(File) :-
     (
