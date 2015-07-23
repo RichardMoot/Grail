@@ -39,7 +39,7 @@
 
 % = directory where the xpce images are stored.
 
-:- pce_image_directory('/Users/moot/grailexec/share/Grail').
+:- pce_image_directory('@graildatadir@').
 
 % = load predicates from the different modules.
 
@@ -789,12 +789,12 @@ refresh_ps_file(1) :-
 	delete_file_if_exists('tmp.ps').
 
 default_image :-
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps tmp.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot tmp.dot'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps structural_rules.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot structural_rules.dot'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps lookup.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot lookup.dot').
+	shell_warn('cp @graildatadir@/grail3.ps tmp.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot tmp.dot'),
+	shell_warn('cp @graildatadir@/grail3.ps structural_rules.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot structural_rules.dot'),
+	shell_warn('cp @graildatadir@/grail3.ps lookup.ps'),
+	shell_warn('cp @graildatadir@/grail3.dot lookup.dot').
 
 % ===================================================================
 % =                      LaTeX and Pdf Windows                      =
@@ -1127,7 +1127,7 @@ latex_sentences(Stream) :-
 create_help_window(H) :-
 	xpce_html,
 	!,
-	new(H, doc_window('file:///Users/moot/grailexec/share/Grail/help.html')).
+	new(H, doc_window('file://@graildatadir@/help.html')).
 create_help_window(_).
 	
 open_help_window :-
@@ -1141,7 +1141,7 @@ about_grail :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, top).
 about_grail.
 	
@@ -1149,7 +1149,7 @@ about_tlg :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, tlg).
 about_tlg.
 
@@ -1157,7 +1157,7 @@ about_design :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, design).
 about_design.
 
@@ -1165,7 +1165,7 @@ about_parsing :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file://@graildatadir@/help.html')),
 	send(@help, goto_label, parsing).
 about_parsing.
 
@@ -1820,7 +1820,7 @@ append_postscript_file(Prefix, Num) :-
     ->
 	/* if tclsh is installed, use it to insert the new postscript */
         /* file into the old one. */
-        concat_atom(['/Users/moot/grailexec/bin/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
+        concat_atom(['@grailbindir@/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
 		     '/bin/mv tmp2.ps tmp.ps'], CommandTclsh),
 	shell_warn(CommandTclsh)
     ;

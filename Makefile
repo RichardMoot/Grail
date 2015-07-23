@@ -78,6 +78,7 @@ user: source/g3.in.devel resources/grail3.html.devel README.devel
 	-cd source ; $(dev2usr) g3.in.devel > g3.in
 	-cd resources ; $(dev2usr) grail3.html.devel > grail3.html
 	-$(dev2usr) README.devel > README
+	-$(dev2usr) README.md.devel > README.md
 
 devel/Makefile.in: ../Makefile.in
 	cp -f ../Makefile.in devel/Makefile.in
