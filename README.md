@@ -1,6 +1,6 @@
 # Grail 3.2.0
 
-Release: 23 July 2015 (21:37:25 CEST)
+Release: 23 July 2015 (21:40:23 CEST)
 
 Copyright :copyright: 2003-2015 Richard Moot (Richard.Moot@labri.fr)
 
@@ -58,7 +58,7 @@ Grail can be install from this directory by typing.
 
 ```
 ./configure --prefix=GRAIL_ROOT
-(sudo) make
+make
 (sudo) make install
 ```
 

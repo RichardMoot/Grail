@@ -58,7 +58,7 @@ Grail can be install from this directory by typing.
 
 ```
 ./configure --prefix=GRAIL_ROOT
-(sudo) make
+make
 (sudo) make install
 ```
 

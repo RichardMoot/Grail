@@ -2,7 +2,7 @@
 % =            Grail 3.2.0             =
 % ======================================
 %
-% Release: 23 July 2015 (21:37:25 CEST)
+% Release: 23 July 2015 (21:40:23 CEST)
 %
 % Copyright (C) 2003-2015 Richard Moot (Richard.Moot@labri.fr)
 % Copyright (C) 2004-2015 CNRS         (http://www.cnrs.fr)
@@ -63,7 +63,7 @@ installations will have these programs installed.
 Grail can be install from this directory by typing.
 
 ./configure --prefix=GRAIL_ROOT
-(sudo) make
+make
 (sudo) make install
 
 GRAIL_ROOT will be the root directory of the Grail system, Grail
@@ -71,10 +71,6 @@ will install its executables in the bin subdirectory and some of the
 image files in the share/Grail subdirectory of this directory. If you
 run the configure script without --prefix option, installation will
 take place with /usr/local/ as the root directory.
-
-Note in order to compile Grail, the make command needs to copy the
-image files to the share/Grail subdirectory first, so you may need to
-type "sudo make" instead of just make. 
 
 The file configure.ac is fairly rudimentary at the moment, but I
 welcome any comments and suggestions for improvement.
