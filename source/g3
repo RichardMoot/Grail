@@ -1,10 +1,10 @@
-#/Applications/SWI-Prolog.app/Contents/MacOS//swipl -q -g start -f
+#!/Applications/SWI-Prolog.app/Contents/MacOS//swipl -q -g start -f
 % -*- Mode: Prolog -*-
 % =====================
-% =    Grail 3.1.3    =
+% =    Grail 3.2.0    =
 % =====================
 
-% Grail 3.1.3 Type-Logical Theorem Prover
+% Grail 3.2.0 Type-Logical Theorem Prover
 % Copyright (C) 2003-2015 Richard Moot (Richard.Moot@labri.fr)
 % Copyright (C) 2004-2015 CNRS         (http://www.cnrs.fr)
 % Copyright (C) 2003-2011 INRIA        (http://www.inria.fr)
@@ -221,8 +221,8 @@ xpce_html.
 % ===================================================================
 
 welcome :- 
-	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail 3.1.3']),
-	format('Release: 27 March 2015 (13:50:49 CET)~n', []).
+	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail 3.2.0']),
+	format('Release: 23 July 2015 (21:20:46 CEST)~n', []).
 
 start :-
 	welcome,
@@ -271,7 +271,7 @@ shell_warn(Cmd) :-
     ->
         true
     ;
-        format(user_err, '{Warning: Shell command failed "~w"}~n', [Cmd])
+        format(user_error, '{Warning: Shell command failed "~w"}~n', [Cmd])
     ).
      
 % ===================================================================
@@ -1278,7 +1278,7 @@ save_fragment :-
 	telling(Out),
 	tell(FileName),
 	format('% -*- Mode: Prolog -*-~n% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', [Base]),
-	format('% !grail 3.1.3~2n', []),
+	format('% !grail 3.2.0~2n', []),
 	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Structural Rules']),
 	list_if_exists(conversion,4),
 	format('% ~`=t~40|~n% =~t~w~t~39|=~n% ~`=t~40|~n', ['Macros']),
@@ -4739,7 +4739,11 @@ new_output_file(File, Alias) :-
         delete_file_if_exists(File),
 	catch(open(File, update, _, [alias(Alias),buffer(line)]),
 	      _, 
-	      open_null_stream(Alias)).
+	      open_null_alias(Alias)).
+
+open_null_alias(Alias) :-
+        open_null_stream(Stream),
+	stream_property(Stream, alias(Alias)).
 
 delete_file_if_exists(File) :-
     (

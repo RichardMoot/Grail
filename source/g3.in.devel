@@ -1,4 +1,4 @@
-#@SWIPL@ -q -g start -f
+#!@SWIPL@ -q -g start -f
 % -*- Mode: Prolog -*-
 % =====================
 % =    Grail @GRAIL_VERSION@    =

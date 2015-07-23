@@ -70,9 +70,6 @@ lefff_b = -e '/^\%LEFFF_A.*/ d' \
 all:
 	-cd source ; $(edit) g3 > g3.tmp
 	-cd source ; mv -f g3.tmp g3
-	-mkdir $(datarootdir)
-	-mkdir $(datadir)
-	cp -f $(images) $(datadir)
 	cd source ; chmod a+x g3
 
 #
@@ -109,11 +106,15 @@ configure: configure.ac
 # necessary
 
 install:
+	-mkdir $(datarootdir)
+	-mkdir $(datadir)
+	cp -f $(images) $(datadir)
 	-mkdir $(bindir)
 	cp -f source/insertdot $(bindir)
 	chmod a+x $(bindir)/insertdot
 	cp -f $(resources) $(datadir)
-	cp -f source/grail3 $(bindir)/g3
+	cp -f source/*.pl $(bindir)
+	cp -f source/g3 $(bindir)
 
 grammars.tgz: $(grammarfiles)
 	tar cfz grammars.tgz $(grammarfiles)
