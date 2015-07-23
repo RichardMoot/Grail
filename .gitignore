@@ -4,6 +4,13 @@ autom4te.cache/*
 config.log
 config.status
 # ignore LaTeX files
+grail_log
+tmp.dot
+tmp.ps
+lookup.dot
+lookup.ps
+structural_rules.dot
+structural_rules.ps
 source/a.out
 source/semantics.*
 source/sentences.*
@@ -14,6 +21,7 @@ source/after.dot
 source/grail_log
 source/linking.dot
 source/lookup.dot
+source/lookup.ps
 source/texlog
 source/previous_semantics.pl
 source/tmp.dot
@@ -23,5 +31,6 @@ source/equiv.dot
 source/chart_var.pl
 source/chart_var_lp.pl
 source/chart_var_cr.pl
-source/structural_rules.*
+source/structural_rules.dot
+source/structural_rules.ps
 source/tmp.ps
