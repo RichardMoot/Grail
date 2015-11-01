@@ -107,7 +107,7 @@ portray_graph_header(String, BgColor, Color) :-
 	format('digraph "~s" {~2n\c
                 bgcolor = ~w;~2n\c
 	        node[color = ~w, fontcolor = ~w, shape = plaintext];~2n\c
-	        edge[color = ~w, labelfontcolor = ~w]~2n', [String, BgColor, Color, Color, Color, Color]).
+	        edge[color = ~w, labelfontcolor = ~w];~2n', [String, BgColor, Color, Color, Color, Color]).
 
 portray_graph_c(Pos, Neg0, Xs, Rs, Gr, String, Rt, Ls, N0, Mp) :-
 	get_option(constraint, Constr),
@@ -872,7 +872,7 @@ portray_graph3(dl(I,A,B,C), Col, BgCol, N0, N, Mp) :-
 	N is N1+1,
         /* invisible node to align the two conclusions */
        (
-	   Constr = false
+	   Constr = 0
        ->
 	   format('{rank=same ~w -> ~w [style=invis]}~n', [N1, CC]),
 	   format('~w [label="",width=.1,style=invis]~n', [N1]),
@@ -917,7 +917,7 @@ portray_graph3(dr(I,A,B,C), Col, BgCol, N0, N, Mp) :-
 	N is N1+1,
         /* invisible node to align the two conclusions */
        (
-	   Constr = false
+	   Constr = 0
        -> 
 	   format('{rank=same ~w -> ~w [style=invis]}~n', [CB, N1]),
 	   format('~w [label="",width=.1,style=invis]~n', [N1]),

@@ -1,6 +1,6 @@
 # Grail 3.2.0
 
-Release: 23 July 2015 (21:40:23 CEST)
+Release: 1 November 2015 (19:27:30 CET)
 
 Copyright :copyright: 2003-2015 Richard Moot (Richard.Moot@labri.fr)
 

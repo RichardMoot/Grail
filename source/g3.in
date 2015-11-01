@@ -222,7 +222,7 @@
 
 welcome :- 
 	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail 3.2.0']),
-	format('Release: 23 July 2015 (21:40:23 CEST)~n', []).
+	format('Release: 1 November 2015 (19:27:30 CET)~n', []).
 
 start :-
 	welcome,

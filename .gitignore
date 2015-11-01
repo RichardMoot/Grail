@@ -4,11 +4,18 @@ autom4te.cache/*
 config.log
 config.status
 # ignore LaTeX files
-after.dot
-before.dot
 semantics.*
 texlog
 grail_log
+source/a.out
+source/semantics.*
+source/sentences.*
+source/grammar.*
+source/grail_log
+source/texlog
+# GraphViz files
+after.dot
+before.dot
 tmp.dot
 tmp.ps
 tmp.pdf
@@ -16,29 +23,27 @@ linking.dot
 lookup.dot
 lookup.ps
 very0.pdf
-previous_semantics.pl
+exam.pdf
+swallow.pdf
 structural_rules.dot
 structural_rules.ps
-source/a.out
-source/semantics.*
-source/sentences.*
-source/grammar.*
-source/grail_log
-source/before.dot
-source/after.dot
-source/grail_log
-source/linking.dot
-source/lookup.dot
-source/lookup.ps
-source/texlog
-source/previous_semantics.pl
 source/tmp.dot
 source/tred.dot
 source/deriv.dot
 source/equiv.dot
-source/chart_var.pl
-source/chart_var_lp.pl
-source/chart_var_cr.pl
+source/before.dot
+source/after.dot
+source/linking.dot
+source/lookup.dot
+source/lookup.ps
 source/structural_rules.dot
 source/structural_rules.ps
 source/tmp.ps
+# temporary files
+previous_semantics.pl
+source/previous_semantics.pl
+# deprecated files
+source/chart_var.pl
+source/chart_var_lp.pl
+source/chart_var_cr.pl
+
