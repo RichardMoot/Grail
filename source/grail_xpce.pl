@@ -1108,7 +1108,7 @@ portray_atom_name(A, A).
 % ===================================================================
 
 user_select_par([Par0|Pars0], Par, Pars) :-
-	set_option(par_mode, Mode),
+	get_option(par_mode, Mode),
     (
 	Mode = auto
     ->

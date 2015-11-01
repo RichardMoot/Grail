@@ -4,11 +4,19 @@ autom4te.cache/*
 config.log
 config.status
 # ignore LaTeX files
+after.dot
+before.dot
+semantics.*
+texlog
 grail_log
 tmp.dot
 tmp.ps
+tmp.pdf
+linking.dot
 lookup.dot
 lookup.ps
+very0.pdf
+previous_semantics.pl
 structural_rules.dot
 structural_rules.ps
 source/a.out
