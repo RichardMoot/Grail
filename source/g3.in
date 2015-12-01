@@ -222,7 +222,7 @@
 
 welcome :- 
 	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail 3.2.0']),
-	format('Release: 1 November 2015 (19:27:30 CET)~n', []).
+	format('Release: 1 December 2015 (17:53:35 CET)~n', []).
 
 start :-
 	welcome,
@@ -1579,8 +1579,10 @@ assert_example_phrases([E|Es], N0, EB) :-
 	N is N0 + 1,
 	assert_example_phrases(Es, N, EB).
 
-assert_example_phrase(example(S,F0), N, EB) :-
+assert_example_phrase(example(S0,F0), N, EB) :-
 	macro_expand(F0, F),
+	/* operate correctly for SWI Prolog string type */
+	(string(S0) -> string_codes(S0,S) ; S = S0),
 	example_category(S, Cat),
 	assert(example_phrase(N, Cat, S, S, F)),
 	name(SA, S),

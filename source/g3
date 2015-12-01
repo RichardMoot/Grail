@@ -1,4 +1,4 @@
-#!/Applications/SWI-Prolog.app/Contents/MacOS//swipl -q -g start -f
+#!/opt/local/bin/swipl -q -g start -f
 % -*- Mode: Prolog -*-
 % =====================
 % =    Grail 3.2.0    =
@@ -39,7 +39,7 @@
 
 % = directory where the xpce images are stored.
 
-:- pce_image_directory('/Users/moot/grailexec/share/Grail').
+:- pce_image_directory('/usr/local/share/Grail').
 
 % = load predicates from the different modules.
 
@@ -222,7 +222,7 @@ xpce_html.
 
 welcome :- 
 	format('~n~`=t~23|~n=~t~w~t~22|=~n~`=t~23|~n', ['Grail 3.2.0']),
-	format('Release: 1 November 2015 (19:27:22 CET)~n', []).
+	format('Release: 1 December 2015 (17:53:35 CET)~n', []).
 
 start :-
 	welcome,
@@ -740,7 +740,7 @@ pdflatex_semantics :-
     (
 	option_true(latex)
     ->
-	shell_warn('/Library/TeX/texbin//pdflatex semantics.tex >> texlog &')
+	shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex semantics.tex >> texlog &')
     ;
 	true
     ).
@@ -756,7 +756,7 @@ open_semantics_files :-
 % ===================================================================
 
 producing_postscript :-
-	'NULL' \== 'NULL'.
+	'/usr/local/bin/gv' \== 'NULL'.
 
 new_postscript_window(0, _).
 new_postscript_window(1, File) :-
@@ -768,7 +768,7 @@ new_postscript_window(File) :-
     (
 	PId == child
     ->
-	concat_atom(['NULL -watch ', File, '.ps'], Cmd),
+	concat_atom(['/usr/local/bin/gv -watch ', File, '.ps'], Cmd),
 	shell_warn(Cmd)
     ;
 	assert('$PS'(PId))
@@ -789,12 +789,12 @@ refresh_ps_file(1) :-
 	delete_file_if_exists('tmp.ps').
 
 default_image :-
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps tmp.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot tmp.dot'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps structural_rules.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot structural_rules.dot'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.ps lookup.ps'),
-	shell_warn('cp /Users/moot/grailexec/share/Grail/grail3.dot lookup.dot').
+	shell_warn('cp /usr/local/share/Grail/grail3.ps tmp.ps'),
+	shell_warn('cp /usr/local/share/Grail/grail3.dot tmp.dot'),
+	shell_warn('cp /usr/local/share/Grail/grail3.ps structural_rules.ps'),
+	shell_warn('cp /usr/local/share/Grail/grail3.dot structural_rules.dot'),
+	shell_warn('cp /usr/local/share/Grail/grail3.ps lookup.ps'),
+	shell_warn('cp /usr/local/share/Grail/grail3.dot lookup.dot').
 
 % ===================================================================
 % =                      LaTeX and Pdf Windows                      =
@@ -804,14 +804,14 @@ open_semantics_window :-
     (
 	producing_pdf
     ->
-        shell_warn('NULL semantics.pdf >> texlog &')
+        shell_warn('/usr/local/bin/gv semantics.pdf >> texlog &')
     ;
 	true
     ).
 
 producing_pdf :-
-	'/Library/TeX/texbin//pdflatex' \== 'NULL',
-	'NULL' \== 'NULL'.
+	'/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex' \== 'NULL',
+	'/usr/local/bin/gv' \== 'NULL'.
 
 
 % ==========================
@@ -823,7 +823,7 @@ open_latex_structural_rules_window :-
 	producing_pdf
     ->
 	latex_structural_rules_wait,
-        shell_warn('NULL postulates.pdf >> texlog &')
+        shell_warn('/usr/local/bin/gv postulates.pdf >> texlog &')
     ;
 	true
     ).
@@ -834,7 +834,7 @@ latex_structural_rules :-
         latex_structural_rules(post),
 	latex_tail_t(post),
         close(post),
-        shell_warn('/Library/TeX/texbin//pdflatex postulates.tex >> texlog &').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex postulates.tex >> texlog &').
 
 latex_structural_rules_wait :-
 	new_output_file('postulates.tex', post),
@@ -842,7 +842,7 @@ latex_structural_rules_wait :-
         latex_structural_rules(post),
 	latex_tail_t(post),
         close(post),
-        shell_warn('/Library/TeX/texbin//pdflatex postulates.tex >> texlog').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex postulates.tex >> texlog').
 
 latex_structural_rules(Stream) :- 
         findall(conversion(X,Y,V,Z),conversion(X,Y,V,Z), L0),
@@ -942,7 +942,7 @@ open_latex_lexicon_window :-
 	producing_pdf
     ->
 	latex_lexicon_wait,
-        shell_warn('NULL lexicon.pdf >> texlog &')
+        shell_warn('/usr/local/bin/gv lexicon.pdf >> texlog &')
     ;
 	true
     ).
@@ -953,7 +953,7 @@ latex_lexicon :-
 	latex_lexicon(lex),
 	latex_tail(lex),
         close(lex),
-        shell_warn('/Library/TeX/texbin//pdflatex lexicon.tex >> texlog &').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex lexicon.tex >> texlog &').
 
 
 latex_lexicon_wait :-
@@ -962,7 +962,7 @@ latex_lexicon_wait :-
 	latex_lexicon(lex),
 	latex_tail(lex),
         close(lex),
-        shell_warn('/Library/TeX/texbin//pdflatex lexicon.tex >> texlog').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex lexicon.tex >> texlog').
 
 % =
 
@@ -1042,7 +1042,7 @@ open_latex_grammar_window :-
 	producing_pdf
     ->
 	latex_grammar_wait,
-        shell_warn('NULL grammar.pdf >> texlog &')
+        shell_warn('/usr/local/bin/gv grammar.pdf >> texlog &')
     ;
 	true
     ).
@@ -1061,7 +1061,7 @@ latex_grammar :-
         latex_structural_rules(gra),
 	latex_tail_t(gra),
 	close(gra),
-        shell_warn('/Library/TeX/texbin//pdflatex grammar.tex >> texlog &').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex grammar.tex >> texlog &').
 
 latex_grammar_wait :-
 	new_output_file('grammar.tex', gra),
@@ -1077,14 +1077,14 @@ latex_grammar_wait :-
         latex_structural_rules(gra),
 	latex_tail_t(gra),
 	close(gra),
-        shell_warn('/Library/TeX/texbin//pdflatex grammar.tex >> texlog').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex grammar.tex >> texlog').
 
 open_latex_sentences_window :-
     (
 	producing_pdf
     ->
 	latex_sentences_wait,
-        shell_warn('NULL sentences.pdf >> texlog &')
+        shell_warn('/usr/local/bin/gv sentences.pdf >> texlog &')
     ;
 	true
     ).
@@ -1096,7 +1096,7 @@ latex_sentences_wait :-
 	latex_sentences(exa),
 	latex_tail_t(exa),
         close(exa),
-        shell_warn('/Library/TeX/texbin//pdflatex sentences.tex >> texlog').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex sentences.tex >> texlog').
 
 latex_sentences :-
 	new_output_file('sentences.tex', exa),
@@ -1104,7 +1104,7 @@ latex_sentences :-
 	latex_sentences(exa),
 	latex_tail_t(exa),
         close(exa),
-        shell_warn('/Library/TeX/texbin//pdflatex sentences.tex >> texlog &').
+        shell_warn('/usr/local/texlive/2012/bin/x86_64-darwin//pdflatex sentences.tex >> texlog &').
 
 latex_sentences(Stream) :-
         findall(example(Cat,String,G),(example_phrase(_N,Cat,String,_Ant,G0),
@@ -1127,7 +1127,7 @@ latex_sentences(Stream) :-
 create_help_window(H) :-
 	xpce_html,
 	!,
-	new(H, doc_window('file:///Users/moot/grailexec/share/Grail/help.html')).
+	new(H, doc_window('file:///usr/local/share/Grail/help.html')).
 create_help_window(_).
 	
 open_help_window :-
@@ -1141,7 +1141,7 @@ about_grail :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file:///usr/local/share/Grail/help.html')),
 	send(@help, goto_label, top).
 about_grail.
 	
@@ -1149,7 +1149,7 @@ about_tlg :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file:///usr/local/share/Grail/help.html')),
 	send(@help, goto_label, tlg).
 about_tlg.
 
@@ -1157,7 +1157,7 @@ about_design :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file:///usr/local/share/Grail/help.html')),
 	send(@help, goto_label, design).
 about_design.
 
@@ -1165,7 +1165,7 @@ about_parsing :-
 	xpce_html,
 	!,
 	open_help_window,
-	send(@help, url('file:///Users/moot/grailexec/share/Grail/help.html')),
+	send(@help, url('file:///usr/local/share/Grail/help.html')),
 	send(@help, goto_label, parsing).
 about_parsing.
 
@@ -1579,8 +1579,10 @@ assert_example_phrases([E|Es], N0, EB) :-
 	N is N0 + 1,
 	assert_example_phrases(Es, N, EB).
 
-assert_example_phrase(example(S,F0), N, EB) :-
+assert_example_phrase(example(S0,F0), N, EB) :-
 	macro_expand(F0, F),
+	/* operate correctly for SWI Prolog string type */
+	(string(S0) -> string_codes(S0,S) ; S = S0),
 	example_category(S, Cat),
 	assert(example_phrase(N, Cat, S, S, F)),
 	name(SA, S),
@@ -1816,11 +1818,11 @@ update_dotfile(Num0) :-
 
 append_postscript_file(Prefix, Num) :-
     (
-	'/usr/bin/tclsh' \== 'NULL'
+	'/usr/local/bin/tclsh' \== 'NULL'
     ->
 	/* if tclsh is installed, use it to insert the new postscript */
         /* file into the old one. */
-        concat_atom(['/Users/moot/grailexec/bin/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
+        concat_atom(['/usr/local/bin/insertdot ', Prefix, Num, '.ps tmp.ps tmp2.ps ; ',
 		     '/bin/mv tmp2.ps tmp.ps'], CommandTclsh),
 	shell_warn(CommandTclsh)
     ;
@@ -1939,7 +1941,7 @@ open_latex_examples_window :-
 	producing_pdf
     ->
 	parse_all_examples,
-        shell_warn('NULL semantics.pdf >> texlog &')
+        shell_warn('/usr/local/bin/gv semantics.pdf >> texlog &')
     ;
 	true
     ).

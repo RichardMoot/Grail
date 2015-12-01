@@ -1,5 +1,5 @@
 
-prefix      = /Users/moot/grailexec
+prefix      = /usr/local
 exec_prefix = ${prefix}
 bindir      = ${exec_prefix}/bin
 datarootdir = ${prefix}/share

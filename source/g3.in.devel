@@ -1579,8 +1579,10 @@ assert_example_phrases([E|Es], N0, EB) :-
 	N is N0 + 1,
 	assert_example_phrases(Es, N, EB).
 
-assert_example_phrase(example(S,F0), N, EB) :-
+assert_example_phrase(example(S0,F0), N, EB) :-
 	macro_expand(F0, F),
+	/* operate correctly for SWI Prolog string type */
+	(string(S0) -> string_codes(S0,S) ; S = S0),
 	example_category(S, Cat),
 	assert(example_phrase(N, Cat, S, S, F)),
 	name(SA, S),

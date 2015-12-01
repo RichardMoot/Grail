@@ -1,4 +1,4 @@
-#!/usr/bin/tclsh
+#!/usr/local/bin/tclsh
 
 set infile [lindex $argv 0]
 
