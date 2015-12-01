@@ -228,7 +228,7 @@ example_deriv_status(R, R, ' \\vdash ').
 % =
 
 latex_label(Label) :-
-	latex_label(Label, 1, [], user).
+	latex_label(Label, 1, [], user_output).
 
 latex_label(Label, Stream) :-
 	latex_label(Label, 1, [], Stream),
@@ -333,7 +333,7 @@ latex_formula(T, Stream) :-
 	format(Stream,'\\rule[-.2ex]{0pt}{.9em}', []).
 
 latex_formula(T) :-
-        latex_formula(T, 1, user).
+        latex_formula(T, 1, user_output).
 
 % = latex_formula0(+Type)
 % write a type with outer brackets
@@ -500,7 +500,7 @@ write_inf(Inf, Stream) :-
 
 latex_semantics(Sem, Formula) :-
 	get_variable_types(Sem, Formula, Tr),
-	latex_semantics(Sem, 1, Tr, user).
+	latex_semantics(Sem, 1, Tr, user_output).
 latex_semantics(Sem, Formula, Stream) :-
 	get_variable_types(Sem, Formula, Tr),
         latex_semantics(Sem, 1, Tr, Stream).
@@ -1270,14 +1270,14 @@ write_conn(X, Stream) :-
 
 write_atom_italics(At0, Stream) :-
 	latex_quote_underscores(At0, At),
-	format(Stream, '\\textit{~p}', [At]).
+	format(Stream, '\\textit{~W}', [At,[character_escapes(off)]]).
 
 write_atom(At0, Stream) :-
 	latex_quote_underscores(At0, At),
     (
         number(At)
     ->
-        format(Stream, '$~p$', [At])
+        format(Stream, '$~W$', [At,[character_escapes(off)]])
     ;
         /* for some reason format/2 (but not write/2) puts a backslash before double quotes, which LaTeX doesn't like */
         /* this solution is a bit of a hack, and should preferable be replaced by something more elegant */
