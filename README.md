@@ -2,9 +2,9 @@
 
 Release: 1 December 2015 (17:53:35 CET)
 
-Copyright :copyright: 2003-2015 Richard Moot (Richard.Moot@labri.fr)
+Copyright :copyright: 2003-2018 Richard Moot (Richard.Moot@lirmm.fr)
 
-Copyright :copyright: 2004-2015 CNRS         (http://www.cnrs.fr)
+Copyright :copyright: 2004-2018 CNRS         (http://www.cnrs.fr)
 
 Copyright :copyright: 2003-2011 INRIA        (http://www.inria.fr)
 
