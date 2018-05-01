@@ -1,6 +1,7 @@
 # Grail
 
-Grail is a family of theorem provers for type-logical grammars.
+The Grail family of theorem provers have been designed to work with a va-riety of modern type-logical frameworks, including multimodal type-logical grammars (Moortgat, 2011), NL_cl_ (Barker and Shan, 2014), the Displacement calculus (Morrill, Valentín and Fadda, 2011) and hybrid type-logical grammars (Kubota and Levine, 2012).
+The tools give a transparent way of implementing grammars and testing their consequences, providing a natural deduction proof in the specific type-logical gram- mar for each of the readings of a sentence. None of this replaces careful reflection by the grammar writer, of course, but in many cases, computational testing of hand-written grammars will reveal surprises, showing unintended consequences of our grammar and such unintended proofs (or unintended _absences_ of proofs) help us improve the grammar. Computational tools also help us speed up grammar development, for example by allowing us to compare several alternative solutions to a problem and investigate where they make different predictions.
 
 
 * [Grail 0](https://github.com/RichardMoot/Grail0)
@@ -13,15 +14,17 @@ Grail is a family of theorem provers for type-logical grammars.
 
 ### Logic
 
-[LinearOne](https://github.com/RichardMoot/LinearOne) can be used as a theorem prover for the Displacement calculus and for hybrid type-logical grammars. All other provers use a version of multimodal categorial grammars. 
+[LinearOne](https://github.com/RichardMoot/LinearOne) can be used as a theorem prover for the Displacement calculus and for hybrid type-logical grammars. All other provers use a version of multimodal categorial grammars.
+
+Multimodal categorial grammars are rather flexible and the Lambek calculus has a very simple instantiation as a multimodal grammar (using a single, associative mode). Other logics also have a multimodal instantiation. Examples are  NL_cl_ (Barker and Shan, 2014) and the Displacement calculus (Valentín 2014 gives a multimodal version).
 
 ### Prolog license
 
 [Grail 2](https://github.com/RichardMoot/Grail2) is the most user-friendly system for beginners, but it requires a [SICStus Prolog](https://sicstus.sics.se) license. All other theorem provers use the free [SWI Prolog](http://www.swi-prolog.org).
 
-### User-defined structural rules
-
 ### Natural deduction output
+
+With the exception of [Grail 3](https://github.com/RichardMoot/Grail), all provers prove natural deduction output. 
 
 ### Comparison
 
@@ -37,11 +40,22 @@ The following table presents a comparison of the different theorem provers. Givi
 Prover | Prolog | ND | Graph | Interactive | Complete | User-defined SR
 -------|--------|------|------|------------|----------|----------------
 [Grail 0](https://github.com/RichardMoot/Grail0) | SWI | + | - | - | + | + |
-Grail 2 | SICStus | + | + | + | + | +
-Grail 3 | SWI | - | + | + | + | + | +
-Grail Light | SWI | + | NA | + | - | -
-LinearOne | SWI | + | + | - | + | NA
+[Grail 2](https://github.com/RichardMoot/Grail2) | SICStus | + | + | + | + | +
+[Grail 3](https://github.com/RichardMoot/Grail) | SWI | - | + | + | + | + | +
+[Grail Light](https://github.com/RichardMoot/GrailLight) | SWI | + | NA | + | - | -
+[LinearOne](https://github.com/RichardMoot/LinearOne) | SWI | + | + | - | + | NA
 
 
 # References
 
+Barker, C. and Shan C. (2014) Continuations and Natural Language. Oxford Studies in Theoretical
+Linguistics, Oxford University Press
+
+Kubota, Y. and Levine, R. (2012) Gapping as like-category coordination. In: Béchet, D., Dikovsky, A. (eds)
+Logical Aspects of Computational Linguistics, Springer, Nantes, Lecture Notes in Computer
+Science, vol 7351, pp 135–150
+
+Morrill, G., Valentín, O. and Fadda, M. (2011) The displacement calculus. Journal of Logic, Language and Information 20(1):1–48
+
+Valentín, O. (2014) The hidden structural rules of the discontinuous Lambek calculus. In: Casadio, C.,
+Coecke, B., Moortgat, M., Scott, P. (eds) Categories and Types in Logic, Language, and Physics: Essays dedicated to Jim Lambek on the Occasion of this 90th Birthday, no. 8222 in Lecture Notes in Artificial Intelligence, Springer, pp 402–420
