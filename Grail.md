@@ -1,12 +1,13 @@
 # Grail
 
-The Grail family of theorem provers have been designed to work with a va-riety of modern type-logical frameworks, including multimodal type-logical grammars (Moortgat, 2011), NL_cl_ (Barker and Shan, 2014), the Displacement calculus (Morrill, Valentín and Fadda, 2011) and hybrid type-logical grammars (Kubota and Levine, 2012).
+The Grail family of theorem provers have been designed to work with a variety of modern [type-logical frameworks](https://plato.stanford.edu/entries/typelogical-grammar/), including multimodal type-logical grammars (Moortgat, 2011), NL_cl_ (Barker and Shan, 2014), the Displacement calculus (Morrill, Valentín and Fadda, 2011) and hybrid type-logical grammars (Kubota and Levine, 2012).
+
 The tools give a transparent way of implementing grammars and testing their consequences, providing a natural deduction proof in the specific type-logical gram- mar for each of the readings of a sentence. None of this replaces careful reflection by the grammar writer, of course, but in many cases, computational testing of hand-written grammars will reveal surprises, showing unintended consequences of our grammar and such unintended proofs (or unintended _absences_ of proofs) help us improve the grammar. Computational tools also help us speed up grammar development, for example by allowing us to compare several alternative solutions to a problem and investigate where they make different predictions.
 
 
-* [Grail 0](https://github.com/RichardMoot/Grail0)
-* [Grail 2](https://github.com/RichardMoot/Grail2)
-* [Grail 3](https://github.com/RichardMoot/Grail) proof net parser for multimodal categorial grammars.
+* [Grail 0](https://github.com/RichardMoot/Grail0) bare-bones proof net parser for multimodal categorial grammars.
+* [Grail 2](https://github.com/RichardMoot/Grail2) interactive parser for multimodal categorial grammars, using proof nets and term labeling.
+* [Grail 3](https://github.com/RichardMoot/Grail) interactive proof net parser for multimodal categorial grammars.
 * [Grail Light](https://github.com/RichardMoot/GrailLight) chart parser for multimodal categorial grammars, specialized for wide-coverage French parsing.
 * [LinearOne](https://github.com/RichardMoot/LinearOne) a theorem prover for first-order linear logic. Can output natural deduction/sequent proofs for the Lambek calculus, hybrid type-logical grammars, and (a fragment of) the Displacement calculus.
 
@@ -24,7 +25,7 @@ Multimodal categorial grammars are rather flexible and the Lambek calculus has a
 
 ### Natural deduction output
 
-With the exception of [Grail 3](https://github.com/RichardMoot/Grail), all provers prove natural deduction output. 
+With the exception of [Grail 3](https://github.com/RichardMoot/Grail), all provers provide natural deduction output.
 
 ### Comparison
 
@@ -54,6 +55,9 @@ Linguistics, Oxford University Press
 Kubota, Y. and Levine, R. (2012) Gapping as like-category coordination. In: Béchet, D., Dikovsky, A. (eds)
 Logical Aspects of Computational Linguistics, Springer, Nantes, Lecture Notes in Computer
 Science, vol 7351, pp 135–150
+
+Moortgat, M. (2011) Categorial type logics. In: van Benthem J, ter Meulen A (eds) Handbook of
+Logic and Language, North-Holland Elsevier, Amsterdam, chap 2, pp 95–179
 
 Morrill, G., Valentín, O. and Fadda, M. (2011) The displacement calculus. Journal of Logic, Language and Information 20(1):1–48
 
